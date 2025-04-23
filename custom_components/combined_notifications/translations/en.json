@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Basic Settings",
+        "description": "Set up a name and default text.",
+        "data": {
+          "name": "Notification Name",
+          "text_all_clear": "Text when All Clear"
+        }
+      },
+      "appearance": {
+        "title": "Appearance Settings",
+        "description": "Configure colors and icons for the notification.",
+        "data": {
+          "background_color_all_clear": "Background Color (Clear)",
+          "background_color_alert": "Background Color (Alert)",
+          "text_color_all_clear": "Text Color (Clear)",
+          "text_color_alert": "Text Color (Alert)",
+          "icon_all_clear": "Icon (Clear)",
+          "icon_alert": "Icon (Alert)",
+          "icon_color_all_clear": "Icon Color (Clear)",
+          "icon_color_alert": "Icon Color (Alert)"
+        }
+      },
+      "add_condition": {
+        "title": "Add Condition",
+        "description": "Add an entity and define when it should trigger the notification.",
+        "data": {
+          "entity_id": "Entity",
+          "operator": "Operator",
+          "trigger_value": "Trigger Value",
+          "name": "Optional Label (defaults to entity_id)"
+        }
+      },
+      "confirm_conditions": {
+        "title": "Confirm Conditions",
+        "description": "Current conditions:\n{conditions}\n\nAdd another condition or create the notification?",
+        "data": {
+          "add_another": "Add another condition"
+        }
+      }
+    },
+    "error": {
+      "already_configured": "A notification with this name already exists.",
+      "no_conditions": "You must add at least one condition before continuing."
+    },
+    "abort": {
+      "already_configured": "A notification with this name already exists.",
+      "no_conditions": "Setup aborted: at least one condition is required."
+    }
+  }
+}

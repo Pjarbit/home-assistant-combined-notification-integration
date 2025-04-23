@@ -1,0 +1,12 @@
+{
+  "domain": "combined_notifications",
+  "name": "Combined Notifications",
+  "version": "2.0.0",
+  "documentation": "https://github.com/Pjarbit/home-assistant-combined-notification-integration",
+  "issue_tracker": "https://github.com/Pjarbit/home-assistant-combined-notification-integration/issues",
+  "dependencies": [],
+  "codeowners": ["@Pjarbit"],
+  "requirements": []
+}
+
+  
