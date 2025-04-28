@@ -172,4 +172,3 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "conditions": self._conditions
             }
         )
-        )
