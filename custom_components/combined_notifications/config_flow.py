@@ -3,6 +3,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from .const import DOMAIN
+from homeassistant.helpers import selector
 
 # Color options for the notification card
 COLORS = [
@@ -116,7 +117,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Form for adding a condition
         schema = vol.Schema({
-            vol.Required("entity_id"): str,
+            vol.Required("entity_id"): selector.EntitySelector(),  # This line enables the autocomplete dropdown
             vol.Required("operator", default="equals (==)"): vol.In(OPERATORS),
             vol.Required("trigger_value"): str,
             vol.Optional("name"): str,
