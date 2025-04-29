@@ -79,6 +79,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional("card_height", default="100px"): str,
             vol.Optional("card_width", default="100%"): str,
             vol.Optional("icon_size", default="80px"): str,
+            vol.Optional("hide_title", default=False): bool,
         })
 
         return self.async_show_form(
