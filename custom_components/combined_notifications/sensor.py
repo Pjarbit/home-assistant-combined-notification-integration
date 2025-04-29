@@ -165,7 +165,7 @@ class CombinedNotificationSensor(Entity):
 
             actual = state_obj.state
 
-            if not self._evaluate_condition(actual, expected, operator):
+            if self._evaluate_condition(actual, expected, operator):
                 self._unmet.append(label)
 
         # Set state to either all clear or a list of unmet conditions
