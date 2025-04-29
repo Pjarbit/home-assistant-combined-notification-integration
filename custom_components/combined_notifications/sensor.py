@@ -44,6 +44,7 @@ async def async_setup_entry(
             "card_width": config_entry.data.get("card_width", "100%"),
             "icon_size": config_entry.data.get("icon_size", "80px"),
         },
+        "hide_title": config_entry.data.get("hide_title", False),
     }
 
     sensor = CombinedNotificationSensor(hass, name, conditions, settings)
