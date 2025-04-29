@@ -12,7 +12,6 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -42,14 +41,12 @@ async def async_setup_entry(
         "dimensions": {
             "card_height": config_entry.data.get("card_height", "100px"),
             "card_width": config_entry.data.get("card_width", "100%"),
-            "icon_size": config_entry.data.get("icon_size", "80px"),
         },
         "hide_title": config_entry.data.get("hide_title", False),
     }
 
     sensor = CombinedNotificationSensor(hass, name, conditions, settings)
     async_add_entities([sensor], update_before_add=True)
-
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
@@ -123,7 +120,6 @@ class CombinedNotificationSensor(Entity):
             "icon_color_alert": self._settings["icon_colors"]["alert"],
             "card_height": self._settings["dimensions"]["card_height"],
             "card_width": self._settings["dimensions"]["card_width"],
-            "icon_size": self._settings["dimensions"]["icon_size"],
             "is_clear": not bool(self._unmet)
         }
 
