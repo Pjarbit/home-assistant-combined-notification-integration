@@ -118,5 +118,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 Made with ❤️ for the Home Assistant Community
-
-Made with ❤️ for the Home Assistant Community
