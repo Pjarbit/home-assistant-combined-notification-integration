@@ -32,12 +32,12 @@ async def async_setup_entry(
             "alert": config_entry.data.get("background_color_alert", "Red"),
         },
         "text_colors": {
-            "clear": config_entry.data.get("text_color_all_clear", ""),
-            "alert": config_entry.data.get("text_color_alert", ""),
+            "clear": config_entry.data.get("text_color_all_clear", "white"),
+            "alert": config_entry.data.get("text_color_alert", "white"),
         },
         "icon_colors": {
-            "clear": config_entry.data.get("icon_color_all_clear", ""),
-            "alert": config_entry.data.get("icon_color_alert", ""),
+            "clear": config_entry.data.get("icon_color_all_clear", "white"),
+            "alert": config_entry.data.get("icon_color_alert", "white"),
         },
         "dimensions": {
             "card_height": config_entry.data.get("card_height", "100px"),
