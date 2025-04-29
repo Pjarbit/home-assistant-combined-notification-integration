@@ -1,176 +1,211 @@
-"""Config flow for Combined Notifications integration."""
-import voluptuous as vol
-from homeassistant import config_entries
-from homeassistant.core import callback
-from .const import DOMAIN
-from homeassistant.helpers import selector
+class CombinedNotificationsCard extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._createCard();
+  }
 
-# Color options for the notification card
-COLORS = [
-    "Use YOUR Current Theme Color", "Red", "Green", "Blue", "Yellow", "Orange",
-    "Purple", "Gray", "White", "Black", "Teal", "Transparent Background"
-]
+  _createCard() {
+    const style = document.createElement('style');
+    style.textContent = `
+      .card-container {
+        padding: 10px;
+        border-radius: 10px;
+        background: inherit;
+        color: white;
+        text-align: center;
+        box-sizing: border-box;
+        overflow: hidden;
+        width: 315px !important; /* Hard-coded width */
+        height: 100px !important; /* Hard-coded height */
+      }
 
-# Operators with friendly names
-OPERATORS = [
-    "equals (==)",
-    "not equals (!=)",
-    "greater than (>)",
-    "less than (<)"
-]
+      .card-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        height: 100%;
+        width: 100%;
+        box-sizing: border-box;
+      }
 
-class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Combined Notifications."""
-    VERSION = 1
+      .card-header {
+        font-weight: bold;
+        font-size: 20px;
+        margin: 0;
+        text-transform: uppercase;
+      }
 
-    def __init__(self):
-        """Initialize the config flow."""
-        self._data = {}
-        self._conditions = []
+      .card-label {
+        font-size: 18px;
+        font-weight: 500;
+        margin: 0;
+        white-space: normal;
+        display: block;
+        max-width: 100%;
+      }
+      
+      .icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px !important; /* Hard-coded icon size */
+        height: 80px !important; /* Hard-coded icon size */
+      }
 
-    async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
-        errors = {}
+      ha-icon {
+        width: 80px !important; /* Hard-coded icon size */
+        height: 80px !important; /* Hard-coded icon size */
+        display: block;
+      }
+    `;
 
-        if user_input is not None:
-            # Store the basic settings
-            self._data.update(user_input)
+    const card = document.createElement('ha-card');
+    card.className = 'card-container';
 
-            # Basic validation of the name
-            name = user_input.get("name")
-            if any(entry.data.get("name") == name for entry in self._async_current_entries()):
-                errors["name"] = "already_configured"
-            else:
-                # Proceed to next step if no errors
-                return await self.async_step_appearance()
+    const cardInner = document.createElement('div');
+    cardInner.className = 'card-inner';
+    
+    const iconWrapper = document.createElement('div');
+    iconWrapper.className = 'icon-wrapper';
 
-        # First step form - basic information
-        schema = vol.Schema({
-            vol.Required("name"): str,
-            vol.Required("text_all_clear", default="ALL CLEAR"): str,
-        })
+    const icon = document.createElement('ha-icon');
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=schema,
-            errors=errors
-        )
+    const header = document.createElement('div');
+    header.className = 'card-header';
 
-    async def async_step_appearance(self, user_input=None):
-        """Handle appearance settings."""
-        errors = {}
+    const label = document.createElement('div');
+    label.className = 'card-label';
 
-        if user_input is not None:
-            # Store the appearance settings
-            self._data.update(user_input)
-            # Proceed to condition step
-            return await self.async_step_add_condition()
+    iconWrapper.appendChild(icon);
+    cardInner.appendChild(iconWrapper);
+    cardInner.appendChild(header);
+    cardInner.appendChild(label);
+    card.appendChild(cardInner);
 
-        # Appearance form - colors and icons
-        schema = vol.Schema({
-            vol.Required("background_color_all_clear", default="Green"): vol.In(COLORS),
-            vol.Required("background_color_alert", default="Red"): vol.In(COLORS),
-            vol.Optional("text_color_all_clear", default=""): vol.In(COLORS),
-            vol.Optional("text_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("icon_all_clear", default="mdi:hand-okay"): str,
-            vol.Optional("icon_alert", default="mdi:alert-circle"): str,
-            vol.Optional("icon_color_all_clear", default=""): vol.In(COLORS),
-            vol.Optional("icon_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("card_height", default="100px"): str,
-            vol.Optional("card_width", default="100%"): str,
-            vol.Optional("icon_size", default="80px"): str,
-            vol.Optional("hide_title", default=False): bool,
-        })
+    this.cardElements = {
+      icon,
+      iconWrapper,
+      header,
+      label,
+      cardInner
+    };
 
-        return self.async_show_form(
-            step_id="appearance",
-            data_schema=schema,
-            errors=errors
-        )
+    this.shadowRoot.appendChild(style);
+    this.shadowRoot.appendChild(card);
+    this.card = card;
+  }
 
-    async def async_step_add_condition(self, user_input=None):
-        """Step to add a condition entity."""
-        errors = {}
+  set hass(hass) {
+    if (!hass || !this.config) return;
 
-        if user_input is not None:
-            # Process operator selection to get just the symbol
-            operator = user_input["operator"]
-            if operator == "equals (==)":
-                operator = "=="
-            elif operator == "not equals (!=)":
-                operator = "!="
-            elif operator == "greater than (>)":
-                operator = ">"
-            elif operator == "less than (<)":
-                operator = "<"
+    const config = this.config;
+    const entityId = config.entity && config.entity.startsWith('sensor.') ? config.entity : `sensor.${config.entity}`;
+    const stateObj = hass.states[entityId];
+    const { icon, iconWrapper, header, label } = this.cardElements;
 
-            # Add the condition to our list
-            condition = {
-                "entity_id": user_input["entity_id"],
-                "operator": operator,
-                "trigger_value": user_input["trigger_value"],
-                "name": user_input.get("name", user_input["entity_id"])
-            }
-            self._conditions.append(condition)
+    if (!stateObj) {
+      iconWrapper.style.display = 'none';
+      header.textContent = "Entity not found";
+      label.textContent = entityId;
+      return;
+    }
 
-            # Move to confirmation step
-            return await self.async_step_confirm_conditions()
+    iconWrapper.style.display = 'flex';
 
-        # Form for adding a condition
-        schema = vol.Schema({
-            vol.Required("entity_id"): selector.EntitySelector(),  # This line enables the autocomplete dropdown
-            vol.Required("operator", default="equals (==)"): vol.In(OPERATORS),
-            vol.Required("trigger_value"): str,
-            vol.Optional("name"): str,
-        })
+    const attrs = stateObj.attributes || {};
+    const clearText = attrs.text_all_clear || config.text_all_clear || "ALL CLEAR";
+    const isClear = stateObj.state === "" || stateObj.state === clearText;
 
-        return self.async_show_form(
-            step_id="add_condition",
-            data_schema=schema,
-            errors=errors
-        )
+    if (config.hide_when_clear && isClear) {
+      this.card.style.display = 'none';
+      return;
+    } else {
+      this.card.style.display = '';
+    }
 
-    async def async_step_confirm_conditions(self, user_input=None):
-        """Confirm conditions or add more."""
-        if user_input is not None:
-            if user_input.get("add_another"):
-                # Go back to add another condition
-                return await self.async_step_add_condition()
-            else:
-                # Finalize and create entry
-                return self._create_entry()
+    const iconName = isClear
+      ? (config.icon_all_clear || attrs.icon_clear || "mdi:hand-okay") // Prioritize card config
+      : (config.icon_alert || attrs.icon_alert || "mdi:alert-circle"); // Prioritize card config
 
-        # Format conditions for display
-        condition_list = "\n".join(
-            f"- {c.get('name', c['entity_id'])} ({c['entity_id']} {c['operator']} {c['trigger_value']})"
-            for c in self._conditions
-        )
+    const bgColor = isClear
+      ? this._resolveColor(config.background_color_all_clear || attrs.color_clear || "rgba(67, 73, 82, 1)") // Prioritize card config
+      : this._resolveColor(config.background_color_alert || attrs.color_alert || "rgba(190, 11, 11, 0.9)"); // Prioritize card config
 
-        if not condition_list:
-            condition_list = "No conditions added yet. Add at least one condition."
+    const iconColor = isClear
+      ? this._resolveColor(config.icon_color_all_clear || attrs.icon_color_clear || "white") // Prioritize card config
+      : this._resolveColor(config.icon_color_alert || attrs.icon_color_alert || "white"); // Prioritize card config
 
-        schema = vol.Schema({
-            vol.Required("add_another", default=False): bool,
-        })
+    const textColor = isClear
+      ? this._resolveColor(config.text_color_all_clear || attrs.text_color_clear || "white") // Prioritize card config
+      : this._resolveColor(config.text_color_alert || attrs.text_color_alert || "white"); // Prioritize card config
 
-        return self.async_show_form(
-            step_id="confirm_conditions",
-            data_schema=schema,
-            description_placeholders={"conditions": condition_list}
-        )
+    const labelText = isClear ? clearText : stateObj.state;
+    const name = attrs.friendly_name || "NOTIFICATIONS"; // Use sensor friendly_name or default
 
-    @callback
-    def _create_entry(self):
-        """Create the config entry."""
-        if not self._conditions:
-            # Must have at least one condition
-            return self.async_abort(reason="no_conditions")
+    icon.setAttribute('icon', iconName);
+    icon.style.color = iconColor;
 
-        # Create the entry with all collected data
-        return self.async_create_entry(
-            title=self._data["name"],
-            data={
-                **self._data,
-                "conditions": self._conditions
-            }
-        )
+    header.style.color = textColor;
+    header.textContent = name;
+    header.style.display = config.hide_title ? 'none' : '';
+
+    label.style.color = textColor;
+    label.textContent = labelText || '\u00A0';
+
+    this.card.style.background = bgColor;
+    this.card.style.color = textColor;
+  }
+
+  _resolveColor(color) {
+    if (!color) return "inherit";
+    if (color === "Use YOUR Current Theme Color") return "var(--primary-color)";
+    if (color === "Transparent Background") return "transparent";
+    if (color === "Red") return "rgba(190, 11, 11, 0.9)";
+    return color;
+  }
+
+  setConfig(config) {
+    if (!config.entity) {
+      throw new Error("You need to define an entity");
+    }
+
+    this.config = {
+      ...config,
+      hide_when_clear: config.hide_when_clear === true,
+      hide_title: config.hide_title === true
+    };
+  }
+
+  getCardSize() {
+    return this.config?.hide_when_clear ? 0 : 2;
+  }
+
+  static getStubConfig() {
+    return {
+      entity: "",
+      text_all_clear: "ALL CLEAR",
+      icon_all_clear: "mdi:hand-okay",
+      icon_alert: "mdi:alert-circle",
+      background_color_all_clear: "rgba(67, 73, 82, 1)",
+      background_color_alert: "rgba(190, 11, 11, 0.9)",
+      icon_color_all_clear: "white",
+      icon_color_alert: "white",
+      text_color_all_clear: "white",
+      text_color_alert: "white",
+      hide_when_clear: false,
+      hide_title: false
+    };
+  }
+}
+
+customElements.define("combined-notifications-card", CombinedNotificationsCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "combined-notifications-card",
+  name: "Combined Notifications Card",
+  description: "Card that displays alert states from notifications"
+});
