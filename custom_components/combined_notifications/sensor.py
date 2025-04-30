@@ -45,16 +45,17 @@ async def async_setup_entry(
         "hide_title": config_entry.data.get("hide_title", False),
     }
 
-    sensor = CombinedNotificationSensor(hass, name, conditions, settings)
+    sensor = CombinedNotificationSensor(hass, name, conditions, settings, config_entry.entry_id)
     async_add_entities([sensor], update_before_add=True)
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
 
-    def __init__(self, hass: HomeAssistant, name: str, conditions: list[dict], settings: dict[str, Any]):
+    def __init__(self, hass: HomeAssistant, name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
+        self._entry_id = entry_id
 
         # Validate conditions
         self._conditions = []
@@ -90,7 +91,7 @@ class CombinedNotificationSensor(Entity):
     @property
     def unique_id(self) -> str:
         """Return a unique ID for this entity."""
-        return f"combined_notifications_{self._name}"
+        return f"combined_notifications_{self._entry_id}"
 
     @property
     def state(self) -> str:
@@ -120,7 +121,8 @@ class CombinedNotificationSensor(Entity):
             "icon_color_alert": self._settings["icon_colors"]["alert"],
             "card_height": self._settings["dimensions"]["card_height"],
             "card_width": self._settings["dimensions"]["card_width"],
-            "is_clear": not bool(self._unmet)
+            "is_clear": not bool(self._unmet),
+            "hide_title": self._settings["hide_title"],
         }
 
     async def async_added_to_hass(self) -> None:
