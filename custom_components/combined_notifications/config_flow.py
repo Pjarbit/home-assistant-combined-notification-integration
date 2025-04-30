@@ -189,8 +189,6 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         self.config_entry = config_entry
         self._data = dict(config_entry.data)
         self._conditions = list(config_entry.data.get("conditions", []))
-        self._conditions_to_delete = []
-        self._conditions_to_edit = []
 
     async def async_step_init(self, user_input=None):
         """Initial step for options flow."""
@@ -225,27 +223,27 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_basic_settings(self, user_input=None):
-    """Handle the basic settings step."""
-    errors = {}
+        """Handle the basic settings step."""
+        errors = {}
 
-    if user_input is not None:
-        # Update basic settings (without changing the name)
-        self._data.update({
-            "text_all_clear": user_input.get("text_all_clear")
+        if user_input is not None:
+            # Update basic settings (without changing the name)
+            self._data.update({
+                "text_all_clear": user_input.get("text_all_clear")
+            })
+            return await self.async_step_menu()
+
+        # Basic settings form (without the name field)
+        schema = vol.Schema({
+            vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
         })
-        return await self.async_step_menu()
-
-    # Basic settings form (without the name field)
-    schema = vol.Schema({
-        vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
-    })
-
-    return self.async_show_form(
-        step_id="basic_settings",
-        data_schema=schema,
-        errors=errors,
-        description_placeholders={"name": self._data.get("name", "Unknown")}
-    )
+        
+        return self.async_show_form(
+            step_id="basic_settings",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"name": self._data.get("name", "Unknown")}
+        )
 
     async def async_step_appearance(self, user_input=None):
         """Handle appearance settings."""
