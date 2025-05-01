@@ -20,5 +20,29 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the config entry."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+    sensor = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if sensor and hasattr(sensor, "async_update_settings"):
+        settings = {
+            "text_all_clear": entry.data.get("text_all_clear", "ALL CLEAR"),
+            "icons": {
+                "clear": entry.data.get("icon_all_clear", "mdi:hand-okay"),
+                "alert": entry.data.get("icon_alert", "mdi:alert-circle"),
+            },
+            "colors": {
+                "clear": entry.data.get("background_color_all_clear", "Green"),
+                "alert": entry.data.get("background_color_alert", "Red"),
+            },
+            "text_colors": {
+                "clear": entry.data.get("text_color_all_clear", ""),
+                "alert": entry.data.get("text_color_alert", ""),
+            },
+            "icon_colors": {
+                "clear": entry.data.get("icon_color_all_clear", ""),
+                "alert": entry.data.get("icon_color_alert", ""),
+            },
+            "hide_title": str(entry.data.get("hide_title", False)).lower() == "true",
+        }
+        await sensor.async_update_settings(settings, entry.data.get("conditions", []))
+    else:
+        await async_unload_entry(hass, entry)
+        await async_setup_entry(hass, entry)
