@@ -188,6 +188,7 @@ class CombinedNotificationSensor(Entity):
         self._state = new_settings["text_all_clear"]
         self._attr_icon = new_settings["icons"]["clear"]
         await self.async_update_conditions(new_conditions)
+        await self.async_schedule_update_ha_state(True)
 
     def _evaluate_condition(self, actual: str, expected: str, operator: str) -> bool:
         """Evaluate a condition using safe comparisons."""
