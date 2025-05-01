@@ -488,6 +488,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             )
             
             return self.async_create_entry(title="", data={})
+            # REPLACE THE LINE ABOVE WITH THIS:
+            # return self.async_exit(reason="options_saved")
         except Exception as err:
             import logging
             _LOGGER = logging.getLogger(__name__)
