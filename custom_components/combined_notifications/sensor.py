@@ -54,22 +54,18 @@ class CombinedNotificationSensor(Entity):
         self._hass = hass
         self._name = name
         self._entry_id = entry_id
-
-        # Validate conditions
-        self._conditions = [condition for condition in conditions if self._validate_condition(condition)]
+        self._conditions = [
+            condition for condition in conditions if self._validate_condition(condition)
+        ]
         for condition in conditions:
             if not self._validate_condition(condition):
-                _LOGGER.warning(
-                    "Skipping malformed condition in %s: %s", name, condition
-                )
-
+                _LOGGER.warning("Skipping malformed condition in %s: %s", name, condition)
         self._settings = settings
         self._state = settings["text_all_clear"]
         self._unmet = []
         self._unsubscribe_callbacks = []
-        self._debounced_update = None
+        self._debounced_update_task = None
 
-        # Entity properties
         self._attr_has_entity_name = True
         self._attr_should_poll = False
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -123,18 +119,17 @@ class CombinedNotificationSensor(Entity):
     @callback
     def _state_change_listener(self, event):
         """Handle entity state changes with debouncing."""
-        if self._debounced_update:
-            self._debounced_update()
-            self._debounced_update = None
+        if self._debounced_update_task:
+            self._debounced_update_task.cancel()
+            self._debounced_update_task = None
 
         async def debounced_update():
             """Perform the actual update."""
+            _LOGGER.debug(f"Debounced update triggered by: {event.data.get('entity_id')}")
             await self.async_schedule_update_ha_state(True)
-            self._debounced_update = None
+            self._debounced_update_task = None
 
-        self._debounced_update = async_call_later(
-            self._hass, 0.5, lambda _: self._hass.async_create_task(debounced_update())
-        )
+        self._debounced_update_task = self._hass.async_create_task(debounced_update())
 
     async def async_added_to_hass(self) -> None:
         """Set up listeners when the sensor is added to Home Assistant."""
@@ -150,14 +145,13 @@ class CombinedNotificationSensor(Entity):
         for unsub in self._unsubscribe_callbacks:
             unsub()
         self._unsubscribe_callbacks.clear()
-        if self._debounced_update:
-            self._debounced_update()
-            self._debounced_update = None
+        if self._debounced_update_task:
+            self._debounced_update_task.cancel()
+            self._debounced_update_task = None
 
     async def async_update(self) -> None:
         """Update the sensor state by evaluating all conditions."""
         self._unmet = []
-
         for condition in self._conditions:
             entity_id = condition.get("entity_id")
             operator = condition.get("operator", "==")
@@ -169,14 +163,10 @@ class CombinedNotificationSensor(Entity):
                 continue
 
             actual = state_obj.state
-
             if self._evaluate_condition(actual, expected, operator):
                 self._unmet.append(label)
 
-        # Set a concise state
         self._state = self._settings["text_all_clear"] if not self._unmet else "Alert"
-
-        # Update the icon based on the current state
         self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
 
     async def async_update_conditions(self, new_conditions: list[dict]) -> None:
