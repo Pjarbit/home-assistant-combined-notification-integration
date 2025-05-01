@@ -1,10 +1,15 @@
 """Combined Notifications integration."""
 import logging
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, SOURCE_USER
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Combined Notifications component."""
+    # We don't directly handle YAML configuration, only config entries
+    return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Combined Notifications from a config entry."""
