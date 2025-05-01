@@ -9,7 +9,7 @@ from homeassistant.helpers.event import async_track_state_change_event, async_ca
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import logging
-from .const import COLOR_MAP
+from .const import COLOR_MAP, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +45,6 @@ async def async_setup_entry(
     sensor = CombinedNotificationSensor(hass, name, conditions, settings, config_entry.entry_id)
     async_add_entities([sensor], update_before_add=True)
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
-
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
@@ -121,23 +120,22 @@ class CombinedNotificationSensor(Entity):
             "hide_title": self._settings["hide_title"],
         }
 
+    @callback
+    def _state_change_listener(self, event):
+        """Handle entity state changes with debouncing."""
+        if self._debounced_update:
+            self._debounced_update()
+            self._debounced_update = None
+        self._debounced_update = async_call_later(
+            self._hass, 0.5, lambda _: self.async_schedule_update_ha_state(True)
+        )
+
     async def async_added_to_hass(self) -> None:
         """Set up listeners when the sensor is added to Home Assistant."""
-        @callback
-        def _state_change_listener(event):
-            """Handle entity state changes with debouncing."""
-            if self._debounced_update:
-                self._debounced_update()
-                self._debounced_update = None
-            self._debounced_update = async_call_later(
-                self._hass, 0.5, lambda _: self.async_schedule_update_ha_state(True)
-            )
-
-        # Set up a listener for each entity in the conditions
         for condition in self._conditions:
             entity_id = condition["entity_id"]
             unsub = async_track_state_change_event(
-                self._hass, [entity_id], _state_change_listener
+                self._hass, [entity_id], self._state_change_listener
             )
             self._unsubscribe_callbacks.append(unsub)
 
@@ -146,6 +144,9 @@ class CombinedNotificationSensor(Entity):
         for unsub in self._unsubscribe_callbacks:
             unsub()
         self._unsubscribe_callbacks.clear()
+        if self._debounced_update:
+            self._debounced_update()
+            self._debounced_update = None
 
     async def async_update(self) -> None:
         """Update the sensor state by evaluating all conditions."""
