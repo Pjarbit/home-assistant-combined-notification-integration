@@ -9,6 +9,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import logging
+from .const import COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,20 +28,22 @@ async def async_setup_entry(
             "alert": config_entry.data.get("icon_alert", "mdi:alert-circle"),
         },
         "colors": {
-            "clear": config_entry.data.get("background_color_all_clear", "Green"),
-            "alert": config_entry.data.get("background_color_alert", "Red"),
+            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear", "Green"), 
+                                config_entry.data.get("background_color_all_clear", "Green")),
+            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert", "Red"), 
+                                config_entry.data.get("background_color_alert", "Red")),
         },
         "text_colors": {
-            "clear": config_entry.data.get("text_color_all_clear", "white"),
-            "alert": config_entry.data.get("text_color_alert", "white"),
+            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", ""), 
+                                config_entry.data.get("text_color_all_clear", "")),
+            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", ""), 
+                                config_entry.data.get("text_color_alert", "")),
         },
         "icon_colors": {
-            "clear": config_entry.data.get("icon_color_all_clear", "white"),
-            "alert": config_entry.data.get("icon_color_alert", "white"),
-        },
-        "dimensions": {
-            "card_height": config_entry.data.get("card_height", "100px"),
-            "card_width": config_entry.data.get("card_width", "100%"),
+            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", ""), 
+                                config_entry.data.get("icon_color_all_clear", "")),
+            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", ""), 
+                                config_entry.data.get("icon_color_alert", "")),
         },
         "hide_title": str(config_entry.data.get("hide_title", "False")).lower() == "true",
     }
@@ -119,8 +122,6 @@ class CombinedNotificationSensor(Entity):
             "text_color_alert": self._settings["text_colors"]["alert"],
             "icon_color_clear": self._settings["icon_colors"]["clear"],
             "icon_color_alert": self._settings["icon_colors"]["alert"],
-            "card_height": self._settings["dimensions"]["card_height"],
-            "card_width": self._settings["dimensions"]["card_width"],
             "is_clear": not bool(self._unmet),
             "hide_title": self._settings["hide_title"],
         }
