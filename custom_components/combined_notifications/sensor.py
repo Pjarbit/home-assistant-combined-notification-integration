@@ -5,7 +5,7 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import Entity, EntityCategory
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import logging
@@ -28,28 +28,24 @@ async def async_setup_entry(
             "alert": config_entry.data.get("icon_alert", "mdi:alert-circle"),
         },
         "colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear", "Green"), 
-                                config_entry.data.get("background_color_all_clear", "Green")),
-            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert", "Red"), 
-                                config_entry.data.get("background_color_alert", "Red")),
+            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear"), "Green"),
+            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert"), "Red"),
         },
         "text_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", ""), 
-                                config_entry.data.get("text_color_all_clear", "")),
-            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", ""), 
-                                config_entry.data.get("text_color_alert", "")),
+            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", ""), ""),
+            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", ""), ""),
         },
         "icon_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", ""), 
-                                config_entry.data.get("icon_color_all_clear", "")),
-            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", ""), 
-                                config_entry.data.get("icon_color_alert", "")),
+            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", ""), ""),
+            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", ""), ""),
         },
         "hide_title": str(config_entry.data.get("hide_title", "False")).lower() == "true",
     }
 
     sensor = CombinedNotificationSensor(hass, name, conditions, settings, config_entry.entry_id)
     async_add_entities([sensor], update_before_add=True)
+    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
+
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
@@ -61,19 +57,18 @@ class CombinedNotificationSensor(Entity):
         self._entry_id = entry_id
 
         # Validate conditions
-        self._conditions = []
+        self._conditions = [condition for condition in conditions if self._validate_condition(condition)]
         for condition in conditions:
             if not self._validate_condition(condition):
                 _LOGGER.warning(
                     "Skipping malformed condition in %s: %s", name, condition
                 )
-                continue
-            self._conditions.append(condition)
 
         self._settings = settings
         self._state = settings["text_all_clear"]
         self._unmet = []
         self._unsubscribe_callbacks = []
+        self._debounced_update = None
 
         # Entity properties
         self._attr_has_entity_name = True
@@ -130,8 +125,13 @@ class CombinedNotificationSensor(Entity):
         """Set up listeners when the sensor is added to Home Assistant."""
         @callback
         def _state_change_listener(event):
-            """Handle entity state changes."""
-            self.async_schedule_update_ha_state(True)
+            """Handle entity state changes with debouncing."""
+            if self._debounced_update:
+                self._debounced_update()
+                self._debounced_update = None
+            self._debounced_update = async_call_later(
+                self._hass, 0.5, lambda _: self.async_schedule_update_ha_state(True)
+            )
 
         # Set up a listener for each entity in the conditions
         for condition in self._conditions:
@@ -158,9 +158,7 @@ class CombinedNotificationSensor(Entity):
             label = condition.get("name", entity_id)
 
             state_obj = self._hass.states.get(entity_id)
-            if state_obj is None:
-                _LOGGER.warning("Entity not found: %s", entity_id)
-                self._unmet.append(f"{label} (not found)")
+            if state_obj is None or state_obj.state in ("unknown", "unavailable"):
                 continue
 
             actual = state_obj.state
@@ -173,6 +171,19 @@ class CombinedNotificationSensor(Entity):
 
         # Update the icon based on the current state
         self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
+
+    async def async_update_conditions(self, new_conditions: list[dict]) -> None:
+        """Update sensor conditions dynamically."""
+        for unsub in self._unsubscribe_callbacks:
+            unsub()
+        self._unsubscribe_callbacks.clear()
+        self._conditions = [c for c in new_conditions if self._validate_condition(c)]
+        for condition in self._conditions:
+            unsub = async_track_state_change_event(
+                self._hass, [condition["entity_id"]], self._state_change_listener
+            )
+            self._unsubscribe_callbacks.append(unsub)
+        await self.async_update()
 
     def _evaluate_condition(self, actual: str, expected: str, operator: str) -> bool:
         """Evaluate a condition using safe comparisons."""
