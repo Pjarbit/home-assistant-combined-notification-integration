@@ -470,20 +470,26 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
     @callback
     def _update_config_entry(self):
         """Update the config entry with the new data."""
-        # Update the config entry with all collected data
-        data = {
-            **self._data,
-            "conditions": self._conditions
-        }
-        
-        self.hass.config_entries.async_update_entry(
-            self.config_entry, 
-            data=data
-        )
-        
-        # Reload the integration to apply changes
-        self.hass.async_create_task(
-            self.hass.config_entries.async_reload(self.config_entry.entry_id)
-        )
-        
-        return self.async_create_entry(title="", data={})
+        try:
+            # Update the config entry with all collected data
+            data = {
+                **self._data,
+                "conditions": self._conditions
+            }
+            
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, 
+                data=data
+            )
+            
+            # Reload the integration to apply changes
+            self.hass.async_create_task(
+                self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            )
+            
+            return self.async_create_entry(title="", data={})
+        except Exception as err:
+            import logging
+            _LOGGER = logging.getLogger(__name__)
+            _LOGGER.error("Error updating configuration: %s", err)
+            return self.async_abort(reason="update_failed")
