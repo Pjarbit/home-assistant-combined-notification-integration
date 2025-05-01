@@ -203,7 +203,11 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             elif menu_option == "manage_conditions":
                 return await self.async_step_manage_conditions()
             elif menu_option == "save_changes":
-                return self._update_config_entry()
+                # Corrected line:
+                return self.async_create_entry(title=self.config_entry.title, data={
+                    **self._data,
+                    "conditions": self._conditions
+                })
 
         schema = vol.Schema({
             vol.Required("menu_option", default="basic_settings"): vol.In({
@@ -440,7 +444,4 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             # Return to condition list
             return await self.async_step_list_conditions()
 
-        # Get display version of operator
-        operator_display = "equals (==)"
-        if condition["operator"] == "!=":
-            operator_display = "not equals (!=)"
+        # Get display
