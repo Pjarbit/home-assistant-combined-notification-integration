@@ -72,7 +72,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Proceed to condition step
             return await self.async_step_add_condition()
 
-        # Appearance form - colors and icons
+        # Appearance form - colors and icons (without height and width)
         schema = vol.Schema({
             vol.Required("background_color_all_clear", default="Green"): vol.In(COLORS),
             vol.Required("background_color_alert", default="Red"): vol.In(COLORS),
@@ -82,8 +82,6 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional("icon_alert", default="mdi:alert-circle"): str,
             vol.Optional("icon_color_all_clear", default=""): vol.In(COLORS),
             vol.Optional("icon_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("card_height", default="100px"): str,
-            vol.Optional("card_width", default="100%"): str,
             vol.Optional("hide_title", default=False): bool,
         })
 
@@ -254,7 +252,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             self._data.update(user_input)
             return await self.async_step_menu()
 
-        # Appearance form with current values
+        # Appearance form with current values (without height and width)
         schema = vol.Schema({
             vol.Required("background_color_all_clear", 
                        default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
@@ -272,10 +270,6 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                        default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
             vol.Optional("icon_color_alert", 
                        default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
-            vol.Optional("card_height", 
-                       default=self._data.get("card_height", "100px")): str,
-            vol.Optional("card_width", 
-                       default=self._data.get("card_width", "100%")): str,
             vol.Optional("hide_title", 
                        default=self._data.get("hide_title", False)): bool,
         })
