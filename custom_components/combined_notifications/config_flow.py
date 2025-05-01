@@ -2,22 +2,8 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from .const import DOMAIN
+from .const import DOMAIN, COLORS, OPERATORS, OPERATOR_MAP
 from homeassistant.helpers import selector
-
-# Color options for the notification card
-COLORS = [
-    "Use YOUR Current Theme Color", "Red", "Green", "Blue", "Yellow", "Orange",
-    "Purple", "Gray", "White", "Black", "Teal", "Transparent Background"
-]
-
-# Operators with friendly names
-OPERATORS = [
-    "equals (==)",
-    "not equals (!=)",
-    "greater than (>)",
-    "less than (<)"
-]
 
 class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Combined Notifications."""
@@ -39,18 +25,13 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Store the basic settings
             self._data.update(user_input)
-
-            # Basic validation of the name
             name = user_input.get("name")
             if any(entry.data.get("name") == name for entry in self._async_current_entries()):
                 errors["name"] = "already_configured"
             else:
-                # Proceed to next step if no errors
                 return await self.async_step_appearance()
 
-        # First step form - basic information
         schema = vol.Schema({
             vol.Required("name"): str,
             vol.Required("text_all_clear", default="ALL CLEAR"): str,
@@ -67,12 +48,9 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Store the appearance settings
             self._data.update(user_input)
-            # Proceed to condition step
             return await self.async_step_add_condition()
 
-        # Appearance form - colors and icons (without height and width)
         schema = vol.Schema({
             vol.Required("background_color_all_clear", default="Green"): vol.In(COLORS),
             vol.Required("background_color_alert", default="Red"): vol.In(COLORS),
@@ -96,18 +74,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Process operator selection to get just the symbol
-            operator = user_input["operator"]
-            if operator == "equals (==)":
-                operator = "=="
-            elif operator == "not equals (!=)":
-                operator = "!="
-            elif operator == "greater than (>)":
-                operator = ">"
-            elif operator == "less than (<)":
-                operator = "<"
-
-            # Add the condition to our list
+            operator = OPERATOR_MAP[user_input["operator"]]
             condition = {
                 "entity_id": user_input["entity_id"],
                 "operator": operator,
@@ -115,11 +82,8 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "name": user_input.get("name", user_input["entity_id"])
             }
             self._conditions.append(condition)
-
-            # Move to confirmation step
             return await self.async_step_confirm_conditions()
 
-        # Form for adding a condition
         schema = vol.Schema({
             vol.Required("entity_id"): selector.EntitySelector(),
             vol.Required("operator", default="equals (==)"): vol.In(OPERATORS),
@@ -137,13 +101,10 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Confirm conditions or add more."""
         if user_input is not None:
             if user_input.get("add_another"):
-                # Go back to add another condition
                 return await self.async_step_add_condition()
             else:
-                # Finalize and create entry
                 return self._create_entry()
 
-        # Format conditions for display
         condition_list = "\n".join(
             f"- {c.get('name', c['entity_id'])} ({c['entity_id']} {c['operator']} {c['trigger_value']})"
             for c in self._conditions
@@ -166,10 +127,8 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _create_entry(self):
         """Create the config entry."""
         if not self._conditions:
-            # Must have at least one condition
             return self.async_abort(reason="no_conditions")
 
-        # Create the entry with all collected data
         return self.async_create_entry(
             title=self._data["name"],
             data={
@@ -177,7 +136,6 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "conditions": self._conditions
             }
         )
-
 
 class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Combined Notifications."""
@@ -203,11 +161,46 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             elif menu_option == "manage_conditions":
                 return await self.async_step_manage_conditions()
             elif menu_option == "save_changes":
-                # Corrected line:
-                return self.async_create_entry(title=self.config_entry.title, data={
-                    **self._data,
-                    "conditions": self._conditions
-                })
+                sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+                if sensor:
+                    # Prepare settings in the same format as sensor.py
+                    settings = {
+                        "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
+                        "icons": {
+                            "clear": self._data.get("icon_all_clear", "mdi:hand-okay"),
+                            "alert": self._data.get("icon_alert", "mdi:alert-circle"),
+                        },
+                        "colors": {
+                            "clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Green"), "Green"),
+                            "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "Red"),
+                        },
+                        "text_colors": {
+                            "clear": COLOR_MAP.get(self._data.get("text_color_all_clear", ""), ""),
+                            "alert": COLOR_MAP.get(self._data.get("text_color_alert", ""), ""),
+                        },
+                        "icon_colors": {
+                            "clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", ""), ""),
+                            "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), ""),
+                        },
+                        "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
+                    }
+                    # Update sensor dynamically
+                    await sensor.async_update_settings(settings, self._conditions)
+                    # Save config entry without triggering reload
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={
+                            **self._data,
+                            "conditions": self._conditions
+                        }
+                    )
+                    return self.async_create_entry(title="", data={})
+                else:
+                    # Fallback to full update
+                    return self.async_create_entry(title=self.config_entry.title, data={
+                        **self._data,
+                        "conditions": self._conditions
+                    })
 
         schema = vol.Schema({
             vol.Required("menu_option", default="basic_settings"): vol.In({
@@ -229,13 +222,11 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         errors = {}
 
         if user_input is not None:
-            # Update basic settings (without changing the name)
             self._data.update({
                 "text_all_clear": user_input.get("text_all_clear")
             })
             return await self.async_step_menu()
 
-        # Basic settings form (without the name field)
         schema = vol.Schema({
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
         })
@@ -252,11 +243,9 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         errors = {}
 
         if user_input is not None:
-            # Update appearance settings
             self._data.update(user_input)
             return await self.async_step_menu()
 
-        # Appearance form with current values (without height and width)
         schema = vol.Schema({
             vol.Required("background_color_all_clear",
                          default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
@@ -320,11 +309,9 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             if action == "edit" and selected_index is not None:
                 return await self.async_step_edit_condition({"index": selected_index})
             elif action == "delete" and selected_index is not None:
-                # Remove the condition
                 self._conditions.pop(selected_index)
                 return await self.async_step_list_conditions()
 
-        # No conditions case
         if not self._conditions:
             schema = vol.Schema({
                 vol.Required("condition_action", default="back"): vol.In({
@@ -337,7 +324,6 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 description_placeholders={"conditions": "No conditions have been added yet."}
             )
 
-        # Build choices for conditions
         condition_choices = {}
         conditions_text = []
 
@@ -373,18 +359,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         errors = {}
 
         if user_input is not None:
-            # Process operator selection to get just the symbol
-            operator = user_input["operator"]
-            if operator == "equals (==)":
-                operator = "=="
-            elif operator == "not equals (!=)":
-                operator = "!="
-            elif operator == "greater than (>)":
-                operator = ">"
-            elif operator == "less than (<)":
-                operator = "<"
-
-            # Add the condition to our list
+            operator = OPERATOR_MAP[user_input["operator"]]
             condition = {
                 "entity_id": user_input["entity_id"],
                 "operator": operator,
@@ -392,11 +367,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 "name": user_input.get("name", user_input["entity_id"])
             }
             self._conditions.append(condition)
-
-            # Go back to condition management
             return await self.async_step_manage_conditions()
 
-        # Form for adding a condition
         schema = vol.Schema({
             vol.Required("entity_id"): selector.EntitySelector(),
             vol.Required("operator", default="equals (==)"): vol.In(OPERATORS),
@@ -416,32 +388,30 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         index = user_input.get("index") if user_input else None
 
         if index is None:
-            # If no index provided, go back to list
             return await self.async_step_list_conditions()
 
         condition = self._conditions[index]
 
         if user_input and "entity_id" in user_input:
-            # Save the edited condition
-            operator = user_input["operator"]
-            if operator == "equals (==)":
-                operator = "=="
-            elif operator == "not equals (!=)":
-                operator = "!="
-            elif operator == "greater than (>)":
-                operator = ">"
-            elif operator == "less than (<)":
-                operator = "<"
-
-            # Update the condition
+            operator = OPERATOR_MAP[user_input["operator"]]
             self._conditions[index] = {
                 "entity_id": user_input["entity_id"],
                 "operator": operator,
                 "trigger_value": user_input["trigger_value"],
                 "name": user_input.get("name", user_input["entity_id"])
             }
-
-            # Return to condition list
             return await self.async_step_list_conditions()
 
-        # Get display
+        schema = vol.Schema({
+            vol.Required("entity_id", default=condition["entity_id"]): selector.EntitySelector(),
+            vol.Required("operator", default=[op for op in OPERATORS if OPERATOR_MAP[op] == condition["operator"]][0]): vol.In(OPERATORS),
+            vol.Required("trigger_value", default=condition["trigger_value"]): str,
+            vol.Optional("name", default=condition.get("name", condition["entity_id"])): str,
+            vol.Required("index", default=index): str  # Hidden index; str for simplicity, could be int
+        })
+
+        return self.async_show_form(
+            step_id="edit_condition",
+            data_schema=schema,
+            errors=errors
+        )
