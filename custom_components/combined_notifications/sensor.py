@@ -166,7 +166,7 @@ class CombinedNotificationSensor(Entity):
             if self._evaluate_condition(actual, expected, operator):
                 self._unmet.append(label)
 
-        self._state = self._settings["text_all_clear"] if not self._unmet else "Alert"
+        self._state = self._settings["text_all_clear"] if not self._unmet else ", ".join(self._unmet)
         self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
 
     async def async_update_conditions(self, new_conditions: list[dict]) -> None:
