@@ -126,8 +126,14 @@ class CombinedNotificationSensor(Entity):
         if self._debounced_update:
             self._debounced_update()
             self._debounced_update = None
+
+        async def debounced_update():
+            """Perform the actual update."""
+            await self.async_schedule_update_ha_state(True)
+            self._debounced_update = None
+
         self._debounced_update = async_call_later(
-            self._hass, 0.5, lambda _: self.async_schedule_update_ha_state(True)
+            self._hass, 0.5, lambda _: self._hass.async_create_task(debounced_update())
         )
 
     async def async_added_to_hass(self) -> None:
@@ -167,8 +173,8 @@ class CombinedNotificationSensor(Entity):
             if self._evaluate_condition(actual, expected, operator):
                 self._unmet.append(label)
 
-        # Set state to either all clear or a list of unmet conditions
-        self._state = self._settings["text_all_clear"] if not self._unmet else ", ".join(self._unmet)
+        # Set a concise state
+        self._state = self._settings["text_all_clear"] if not self._unmet else "Alert"
 
         # Update the icon based on the current state
         self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
