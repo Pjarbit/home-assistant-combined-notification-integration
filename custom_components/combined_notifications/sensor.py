@@ -186,6 +186,13 @@ class CombinedNotificationSensor(Entity):
             self._unsubscribe_callbacks.append(unsub)
         await self.async_update()
 
+    async def async_update_settings(self, new_settings: dict[str, Any], new_conditions: list[dict]) -> None:
+        """Update sensor settings and conditions dynamically."""
+        self._settings = new_settings
+        self._state = new_settings["text_all_clear"]
+        self._attr_icon = new_settings["icons"]["clear"]
+        await self.async_update_conditions(new_conditions)
+
     def _evaluate_condition(self, actual: str, expected: str, operator: str) -> bool:
         """Evaluate a condition using safe comparisons."""
         try:
