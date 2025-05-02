@@ -40,6 +40,7 @@ async def async_setup_entry(
             "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", ""), ""),
         },
         "hide_title": str(config_entry.data.get("hide_title", "False")).lower() == "true",
+        "hide_title_alert": str(config_entry.data.get("hide_title_alert", "False")).lower() == "true",
     }
 
     sensor = CombinedNotificationSensor(hass, name, conditions, settings, config_entry.entry_id)
@@ -114,6 +115,7 @@ class CombinedNotificationSensor(Entity):
             "icon_color_alert": self._settings["icon_colors"]["alert"],
             "is_clear": not bool(self._unmet),
             "hide_title": self._settings["hide_title"],
+            "hide_title_alert": self._settings["hide_title_alert"],
         }
 
     @callback
@@ -194,7 +196,7 @@ class CombinedNotificationSensor(Entity):
             self._state = new_settings["text_all_clear"][:255]
             self._attr_icon = new_settings["icons"]["clear"]
             await self.async_update_conditions(new_conditions)
-            await self.async_update()  # Force immediate state recalculation
+            await self.async_update()
             self.async_schedule_update_ha_state(True)
             _LOGGER.debug("Settings and conditions updated successfully")
         except Exception as e:
