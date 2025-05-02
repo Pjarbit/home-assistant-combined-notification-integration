@@ -206,8 +206,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     }
                     _LOGGER.debug("Attempting to save settings: %s, conditions: %s", settings, self._conditions)
                     if sensor and hasattr(sensor, "async_update_settings"):
-                        await sensor.async_update_settings(settings, self._conditions)
-                        _LOGGER.debug("Dynamic sensor update successful")
+                        sensor.async_update_settings(settings, self._conditions)
+                        _LOGGER.debug("Dynamic sensor update triggered")
                     else:
                         _LOGGER.warning("Sensor not available for dynamic update, entry_id: %s", self.config_entry.entry_id)
                     # Save config entry without triggering reload
@@ -496,7 +496,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             vol.Required("operator", default=[op for op in OPERATORS if OPERATOR_MAP[op] == condition["operator"]][0]): vol.In(OPERATORS),
             vol.Required("trigger_value", default=condition["trigger_value"]): str,
             vol.Optional("name", default=condition.get("name", condition["entity_id"])): str,
-            vol.Required("index", default=index): str  # Hidden index; str for simplicity, could be int
+            vol.Required("index", default=index): str
         })
 
         return self.async_show_form(
