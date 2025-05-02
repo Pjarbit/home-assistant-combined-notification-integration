@@ -174,6 +174,13 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 elif menu_option == "manage_conditions":
                     return await self.async_step_manage_conditions()
                 elif menu_option == "save_changes":
+                    if not self.config_entry:
+                        _LOGGER.error("Config entry is None, cannot save options")
+                        return self.async_show_form(
+                            step_id="menu",
+                            data_schema=self._get_menu_schema(),
+                            errors={"base": "no_config_entry"}
+                        )
                     sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
                     _LOGGER.debug("Sensor retrieved: %s, hass.data[DOMAIN]: %s", sensor, self.hass.data.get(DOMAIN, {}))
                     # Prepare settings in the same format as sensor.py
