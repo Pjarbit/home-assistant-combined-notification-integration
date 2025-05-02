@@ -52,23 +52,33 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
+                # Validate color inputs
+                for key in ["background_color_all_clear", "background_color_alert", "text_color_all_clear", "text_color_alert", "icon_color_all_clear", "icon_color_alert"]:
+                    if key in user_input and user_input[key] and user_input[key] not in COLORS:
+                        raise vol.Invalid(f"Invalid color for {key}: {user_input[key]}")
                 self._data.update(user_input)
                 _LOGGER.debug("Appearance settings updated: %s", user_input)
                 return await self.async_step_add_condition()
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in appearance settings: %s", e)
+                errors["base"] = "invalid_input"
             except Exception as e:
                 _LOGGER.error("Error processing appearance settings: %s", e)
                 errors["base"] = "unknown"
 
         schema = vol.Schema({
-            vol.Required("background_color_all_clear", default="Green"): vol.In(COLORS),
-            vol.Required("background_color_alert", default="Red"): vol.In(COLORS),
-            vol.Optional("text_color_all_clear", default=""): vol.In(COLORS),
-            vol.Optional("text_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("icon_all_clear", default="mdi:hand-okay"): str,
-            vol.Optional("icon_alert", default="mdi:alert-circle"): str,
-            vol.Optional("icon_color_all_clear", default=""): vol.In(COLORS),
-            vol.Optional("icon_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("hide_title", default=False): bool,
+            # Clear settings
+            vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+            vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
+            vol.Required("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
+            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "")): vol.In(COLORS),
+            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
+            vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
+            # Alert settings
+            vol.Optional("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
+            vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
+            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
+            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
         })
 
         return self.async_show_form(
@@ -218,7 +228,9 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                             "conditions": self._conditions
                         }
                     )
-                    _LOGGER.debug("Settings and conditions saved successfully")
+                    # Reload config entry to ensure sensor updates
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    _LOGGER.debug("Settings and conditions saved, config entry reloaded")
                     return self.async_create_entry(title="", data={})
             except vol.Invalid as e:
                 _LOGGER.error("Validation error in saving options: %s", e)
@@ -299,24 +311,18 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "unknown"
 
         schema = vol.Schema({
-            vol.Required("background_color_all_clear",
-                         default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
-            vol.Required("background_color_alert",
-                         default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
-            vol.Optional("text_color_all_clear",
-                         default=self._data.get("text_color_all_clear", "")): vol.In(COLORS),
-            vol.Optional("text_color_alert",
-                         default=self._data.get("text_color_alert", "")): vol.In(COLORS),
-            vol.Optional("icon_all_clear",
-                         default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
-            vol.Optional("icon_alert",
-                         default=self._data.get("icon_alert", "mdi:alert-circle")): str,
-            vol.Optional("icon_color_all_clear",
-                         default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
-            vol.Optional("icon_color_alert",
-                         default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
-            vol.Optional("hide_title",
-                         default=self._data.get("hide_title", False)): bool,
+            # Clear settings
+            vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+            vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
+            vol.Required("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
+            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "")): vol.In(COLORS),
+            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
+            vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
+            # Alert settings
+            vol.Optional("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
+            vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
+            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
+            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
         })
 
         return self.async_show_form(
