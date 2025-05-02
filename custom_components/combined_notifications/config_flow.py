@@ -175,49 +175,53 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     return await self.async_step_manage_conditions()
                 elif menu_option == "save_changes":
                     sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
-                    if sensor:
-                        # Prepare settings in the same format as sensor.py
-                        settings = {
-                            "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
-                            "icons": {
-                                "clear": self._data.get("icon_all_clear", "mdi:hand-okay"),
-                                "alert": self._data.get("icon_alert", "mdi:alert-circle"),
-                            },
-                            "colors": {
-                                "clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Green"), "Green"),
-                                "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "Red"),
-                            },
-                            "text_colors": {
-                                "clear": COLOR_MAP.get(self._data.get("text_color_all_clear", ""), ""),
-                                "alert": COLOR_MAP.get(self._data.get("text_color_alert", ""), ""),
-                            },
-                            "icon_colors": {
-                                "clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", ""), ""),
-                                "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), ""),
-                            },
-                            "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
-                        }
-                        _LOGGER.debug("Saving settings: %s, conditions: %s", settings, self._conditions)
-                        # Update sensor dynamically
+                    _LOGGER.debug("Sensor retrieved: %s, hass.data[DOMAIN]: %s", sensor, self.hass.data.get(DOMAIN, {}))
+                    # Prepare settings in the same format as sensor.py
+                    settings = {
+                        "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
+                        "icons": {
+                            "clear": self._data.get("icon_all_clear", "mdi:hand-okay"),
+                            "alert": self._data.get("icon_alert", "mdi:alert-circle"),
+                        },
+                        "colors": {
+                            "clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Green"), "Green"),
+                            "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "Red"),
+                        },
+                        "text_colors": {
+                            "clear": COLOR_MAP.get(self._data.get("text_color_all_clear", ""), ""),
+                            "alert": COLOR_MAP.get(self._data.get("text_color_alert", ""), ""),
+                        },
+                        "icon_colors": {
+                            "clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", ""), ""),
+                            "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), ""),
+                        },
+                        "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
+                    }
+                    _LOGGER.debug("Attempting to save settings: %s, conditions: %s", settings, self._conditions)
+                    if sensor and hasattr(sensor, "async_update_settings"):
                         await sensor.async_update_settings(settings, self._conditions)
-                        # Save config entry without triggering reload
-                        self.hass.config_entries.async_update_entry(
-                            self.config_entry,
-                            data={
-                                **self._data,
-                                "conditions": self._conditions
-                            }
-                        )
-                        return self.async_create_entry(title="", data={})
+                        _LOGGER.debug("Dynamic sensor update successful")
                     else:
-                        _LOGGER.warning("Sensor not found for entry_id: %s", self.config_entry.entry_id)
-                        # Fallback to full update
-                        return self.async_create_entry(title=self.config_entry.title, data={
+                        _LOGGER.warning("Sensor not available for dynamic update, entry_id: %s", self.config_entry.entry_id)
+                    # Save config entry without triggering reload
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={
                             **self._data,
                             "conditions": self._conditions
-                        })
+                        }
+                    )
+                    _LOGGER.debug("Settings and conditions saved successfully")
+                    return self.async_create_entry(title="", data={})
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in saving options: %s", e)
+                return self.async_show_form(
+                    step_id="menu",
+                    data_schema=self._get_menu_schema(),
+                    errors={"base": "invalid_input"}
+                )
             except Exception as e:
-                _LOGGER.error("Error saving options: %s", e)
+                _LOGGER.error("Unexpected error saving options: %s", e)
                 return self.async_show_form(
                     step_id="menu",
                     data_schema=self._get_menu_schema(),
@@ -273,9 +277,16 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             try:
+                # Validate color inputs
+                for key in ["background_color_all_clear", "background_color_alert", "text_color_all_clear", "text_color_alert", "icon_color_all_clear", "icon_color_alert"]:
+                    if key in user_input and user_input[key] and user_input[key] not in COLORS:
+                        raise vol.Invalid(f"Invalid color for {key}: {user_input[key]}")
                 self._data.update(user_input)
                 _LOGGER.debug("Appearance settings updated: %s", user_input)
                 return await self.async_step_menu()
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in appearance settings: %s", e)
+                errors["base"] = "invalid_input"
             except Exception as e:
                 _LOGGER.error("Error processing appearance settings: %s", e)
                 errors["base"] = "unknown"
