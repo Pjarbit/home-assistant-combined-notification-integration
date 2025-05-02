@@ -126,7 +126,7 @@ class CombinedNotificationSensor(Entity):
         async def debounced_update():
             """Perform the actual update."""
             _LOGGER.debug(f"Debounced update triggered by: {event.data.get('entity_id')}")
-            await self.async_schedule_update_ha_state(True)
+            self.async_schedule_update_ha_state(True)
             self._debounced_update_task = None
 
         self._debounced_update_task = self._hass.async_create_task(debounced_update())
@@ -167,7 +167,7 @@ class CombinedNotificationSensor(Entity):
                 self._unmet.append(label)
 
         state = self._settings["text_all_clear"] if not self._unmet else ", ".join(self._unmet)
-        self._state = state[:255]  # Truncate to 255 characters
+        self._state = state[:255]
         if len(state) > 255:
             _LOGGER.warning("State truncated to 255 characters, original length: %s", len(state))
         self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
@@ -191,10 +191,10 @@ class CombinedNotificationSensor(Entity):
         try:
             _LOGGER.debug("Received settings update: %s, conditions: %s", new_settings, new_conditions)
             self._settings = new_settings
-            self._state = new_settings["text_all_clear"][:255]  # Truncate to 255 characters
+            self._state = new_settings["text_all_clear"][:255]
             self._attr_icon = new_settings["icons"]["clear"]
             await self.async_update_conditions(new_conditions)
-            await self.async_schedule_update_ha_state(True)
+            self.async_schedule_update_ha_state(True)
             _LOGGER.debug("Settings and conditions updated successfully")
         except Exception as e:
             _LOGGER.error("Error updating settings: %s", e)
