@@ -37,7 +37,6 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema({
             vol.Required("name"): str,
-            vol.Required("text_all_clear", default="ALL CLEAR"): str,
         })
 
         return self.async_show_form(
@@ -79,6 +78,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
             vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
             vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
+            vol.Optional("hide_title_alert", default=self._data.get("hide_title_alert", False)): bool,
         })
 
         return self.async_show_form(
@@ -213,6 +213,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                             "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), ""),
                         },
                         "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
+                        "hide_title_alert": str(self._data.get("hide_title_alert", False)).lower() == "true",
                     }
                     _LOGGER.debug("Attempting to save settings: %s, conditions: %s", settings, self._conditions)
                     if sensor and hasattr(sensor, "async_update_settings"):
@@ -323,6 +324,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
             vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
             vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
+            vol.Optional("hide_title_alert", default=self._data.get("hide_title_alert", False)): bool,
         })
 
         return self.async_show_form(
