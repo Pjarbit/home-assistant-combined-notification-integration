@@ -194,6 +194,7 @@ class CombinedNotificationSensor(Entity):
             self._state = new_settings["text_all_clear"][:255]
             self._attr_icon = new_settings["icons"]["clear"]
             await self.async_update_conditions(new_conditions)
+            await self.async_update()  # Force immediate state recalculation
             self.async_schedule_update_ha_state(True)
             _LOGGER.debug("Settings and conditions updated successfully")
         except Exception as e:
