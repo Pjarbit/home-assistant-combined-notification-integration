@@ -1,5 +1,7 @@
 # Combined Notifications Integration
 
+![Combined Notifications Demo](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notifications-card-new/main/media/demo.gif)
+
 The **Combined Notifications Integration** for Home Assistant allows you to monitor and group multiple entity conditions into a single backend sensor. This sensor can be used in Lovelace dashboards, automations, or paired with the [Combined Notifications Card](https://github.com/Pjarbit/home-assistant-combined-notifications-card-new) for visual display.
 
 ---
