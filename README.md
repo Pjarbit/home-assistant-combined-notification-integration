@@ -1,120 +1,149 @@
-# Combined Notifications Card
+# Combined Notifications Integration
 
-A custom Lovelace card for Home Assistant that works with the [Combined Notifications Integration](https://github.com/Pjarbit/home-assistant-combined-notifications) to display grouped entity notifications with dynamic styling.
-
-![Combined Notifications Card Demo](media/demo.gif)
-
-## 🚀 Features
-
-- **Auto-styling**: Inherits colors, icons, and text from the integration
-- **Dynamic states**: Shows alert or all-clear states based on entity conditions
-- **Fully customizable**: Override any visual element directly in the card config
-- **Compact & Clear**: Shows only what you need to know at a glance
-
-## 📦 Installation
-
-### HACS Installation (Recommended)
-
-1. Go to the HACS dashboard in Home Assistant
-2. Click the three dots menu in the upper right corner
-3. Select "Custom repositories"
-4. Add this repo:
-   ```
-   https://github.com/Pjarbit/home-assistant-combined-notifications-card-new
-   ```
-5. Select "Dashboard" as the repository type
-6. Click "ADD"
-7. Search for "Combined Notifications Card" in the Dashboard section
-8. Click Install
-9. Restart Home Assistant
-
-### Manual Installation
-
-1. Download the latest release from the [releases page](https://github.com/Pjarbit/home-assistant-combined-notifications-card-new/releases)
-2. Copy the `combined-notifications-card.js` file to your `www/` directory
-3. Add the resource to your dashboard:
-   ```yaml
-   url: /local/combined-notifications-card.js
-   type: module
-   ```
-4. Restart Home Assistant
-
-## ⚙️ Basic Usage
-
-Add the card to your dashboard with this minimal configuration:
-
-```yaml
-type: custom:combined-notifications-card
-entity: sensor.car_alert_notifications
-```
-
-That's it! The card automatically inherits all styling and behavior from the sensor entity created by the Combined Notifications integration.
-
-## 🎨 Customization Options
-
-You can override any default display settings from the sensor using these attributes:
-
-| Attribute | Description | Examples |
-|-----------|-------------|----------|
-| `header_name` | Custom card title | `Car Alerts`, `Lighting`, `Home Security` |
-| `text_all_clear` | Message when all clear | `All OK`, `All Clear`, `Systems Normal` |
-| `background_color_all_clear` | Background for normal state | `green`, `blue`, `teal` |
-| `background_color_alert` | Background for alert state | `red`, `orange`, `yellow` |
-| `icon_all_clear` | Icon for normal state | `mdi:hand-okay`, `mdi:check-circle` |
-| `icon_alert` | Icon for alert state | `mdi:alert-circle`, `mdi:alert` |
-| `icon_color_all_clear` | Icon color for normal state | `white`, `gray`, `var(--primary-color)` |
-| `icon_color_alert` | Icon color for alert state | `yellow`, `red`, `white` |
-| `show_details` | Show entity details | `true`, `false` |
-| `hide_when_clear` | Hide card when all clear | `true`, `false` |
-
-## 📋 Example Configuration
-
-```yaml
-type: custom:combined-notifications-card
-entity: sensor.car_alert_notifications
-header_name: Car Alerts
-text_all_clear: All Systems Normal
-background_color_all_clear: green
-background_color_alert: red
-icon_all_clear: mdi:check-circle
-icon_alert: mdi:alert-circle
-show_details: true
-hide_when_clear: false
-```
-
-## 🧠 How It Works
-
-### Behavior
-When any condition is triggered:
-- Card background changes to your alert color
-- Displays your alert icon
-- Shows a list of unmet conditions
-
-When all conditions are normal:
-- Card switches to your all-clear color
-- Displays your custom "All Clear" message
-- Shows your all-clear icon
-
-## ⚠️ Troubleshooting
-
-**Common Issues:**
-- If the card isn't appearing, check that you've added the JS file to your resources
-- Verify that the integration is properly set up and creating sensor entities
-- Ensure the entity name in your card configuration matches exactly with the sensor created by the integration
-- Check your browser console for any JavaScript errors
-
-## 📚 Related
-
-This card is designed to work with the [Combined Notifications Integration](https://github.com/Pjarbit/home-assistant-combined-notifications). Please install the integration first to create notification group sensors.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📜 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+The **Combined Notifications Integration** for Home Assistant allows you to monitor and group multiple entity conditions into a single backend sensor. This sensor can be used in Lovelace dashboards, automations, or paired with the [Combined Notifications Card](https://github.com/Pjarbit/home-assistant-combined-notifications-card-new) for visual display.
 
 ---
 
-Made with ❤️ for the Home Assistant Community
+## 📦 Installation
+
+### HACS (Recommended)
+
+1. Open **HACS** in Home Assistant
+2. Click the three-dot menu (top right) → **Custom Repositories**
+3. Add this repository:
+
+   ```
+   https://github.com/Pjarbit/home-assistant-combined-notification-integration
+   ```
+4. Set category to: **Integration**
+5. Click **Add**
+6. Search for **Combined Notifications Integration** in HACS Integrations
+7. Click **Install**
+8. Restart Home Assistant if prompted
+9. Go to **Settings → Devices & Services → Add Integration** and search for **Combined Notifications**
+
+### Manual Installation
+
+1. Download the latest release from [GitHub Releases](https://github.com/Pjarbit/home-assistant-combined-notification-integration/releases)
+2. Copy the `combined_notifications` folder into `config/custom_components/`
+3. Restart Home Assistant
+4. Add the integration via **Settings → Devices & Services**
+
+---
+
+## ⚙️ Configuration
+
+After installation:
+
+1. Go to **Settings → Devices & Services → Combined Notifications → Configure**
+2. Define your sensor name
+3. Add any number of conditions
+4. Customize appearance and behavior
+5. Save and use the created sensor entity in dashboards or automations
+
+To modify sensor settings (delete an entity, add a new entity, change triggers, or update colors/icons), simply go to **Settings → Devices & Services → Combined Notifications → Configure**, select your sensor, and make changes directly from the built-in editor. No YAML or restart required.
+
+---
+
+## 🖼️ UI Screenshots
+
+### Main Menu
+
+Navigate sections for conditions and visual settings:
+
+![Main Menu](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/optionsmain.jpg)
+
+### Appearance Settings
+
+Customize text, icons, and colors:
+
+![Appearance Settings](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/Configurationattributes.jpg)
+
+### Conditions Editor
+
+List, edit, or add monitored entity conditions:
+
+![Conditions Editor](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/conditionmenu.jpg)
+
+---
+
+## 🔍 Sensor Behavior
+
+The integration creates a sensor (e.g., `sensor.home_status`) that reports:
+
+* **"ALL CLEAR"** (or custom message) if all conditions are met
+* **Comma-separated list** of unmet condition labels otherwise
+
+It also exposes additional styling data for use in frontend cards.
+
+### Example: All Clear
+
+```yaml
+state: "ALL CLEAR"
+attributes:
+  icon: mdi:check-circle
+  color: green
+  text_color: white
+  icon_color: gray
+```
+
+### Example: Alert
+
+```yaml
+state: "Garage Open, Door Unlocked"
+attributes:
+  icon: mdi:alert-circle
+  color: red
+  text_color: black
+  icon_color: yellow
+```
+
+---
+
+## 🔧 Sensor Appearance Attributes (Modifiable via YAML or UI)
+
+These attributes are configurable in the integration's UI and exposed in the sensor entity for use in dashboards and frontend cards.
+
+### ✅ All-Clear State Attributes
+
+| Attribute Key                | Description                                                   |
+| ---------------------------- | ------------------------------------------------------------- |
+| `text_all_clear`             | Text shown when all conditions are met                        |
+| `icon_all_clear`             | Icon used when in all-clear state (`mdi:*`)                   |
+| `background_color_all_clear` | Background color when all is clear (e.g., `green`, `#00ff00`) |
+| `text_color_all_clear`       | Text color in all-clear state                                 |
+| `icon_color_all_clear`       | Icon color in all-clear state                                 |
+| `hide_title`                 | If `true`, hides the title/header in clear state              |
+
+### ⚠️ Alert State Attributes
+
+| Attribute Key            | Description                                               |
+| ------------------------ | --------------------------------------------------------- |
+| `icon_alert`             | Icon used when one or more conditions are unmet (`mdi:*`) |
+| `background_color_alert` | Background color in alert state                           |
+| `text_color_alert`       | Text color in alert state                                 |
+| `icon_color_alert`       | Icon color in alert state                                 |
+| `hide_title_alert`       | If `true`, hides the title/header in alert state          |
+
+These values are stored in the sensor’s attributes and can be used in custom cards or templates via `state_attr()`.
+
+---
+
+## ✨ Version 3.0 Highlights
+
+* Live UI editing (no restart required)
+* Restructured settings layout for clarity
+* New: optional hidden alert titles for minimal displays
+
+---
+
+## 🔗 Related Projects
+
+* [Combined Notifications Card](https://github.com/Pjarbit/home-assistant-combined-notifications-card-new) — Lovelace frontend card designed to visualize this sensor
+
+---
+
+## 📄 License
+
+MIT License
+See `LICENSE` file for details
