@@ -1,5 +1,5 @@
 {
-  "domain": "combined_notifications",
+  "domains": ["combined_notifications"],
   "name": "Combined Notifications",
   "version": "3.1.3b",
   "documentation": "https://github.com/Pjarbit/home-assistant-combined-notification-integration",
