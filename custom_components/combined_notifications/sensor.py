@@ -22,6 +22,7 @@ async def async_setup_entry(
     name = config_entry.data["name"]
     conditions = config_entry.data.get("conditions", [])
     settings = {
+        "friendly_name": config_entry.data.get("friendly_name", name),
         "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
         "icons": {
             "clear": config_entry.data.get("icon_all_clear", "mdi:hand-okay"),
@@ -79,8 +80,8 @@ class CombinedNotificationSensor(Entity):
 
     @property
     def name(self) -> str:
-        """Return the name of the sensor."""
-        return self._name
+        """Return the friendly name of the sensor if provided, otherwise the default name."""
+        return self._settings.get("friendly_name", self._name)
 
     @property
     def unique_id(self) -> str:
