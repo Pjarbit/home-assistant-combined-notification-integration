@@ -37,6 +37,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema({
             vol.Required("name"): str,
+            vol.Required("friendly_name"): str,
         })
 
         return self.async_show_form(
@@ -251,7 +252,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="menu",
             data_schema=self._get_menu_schema(),
-            description_placeholders={"name": self._data.get("name", "Unknown")}
+            description_placeholders={"name": self._data.get("friendly_name", "Unknown")}
         )
 
     def _get_menu_schema(self):
@@ -288,7 +289,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             step_id="basic_settings",
             data_schema=schema,
             errors=errors,
-            description_placeholders={"name": self._data.get("name", "Unknown")}
+            description_placeholders={"name": self._data.get("friendly_name", "Unknown")}
         )
 
     async def async_step_appearance(self, user_input=None):
@@ -309,7 +310,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "invalid_input"
             except Exception as e:
                 _LOGGER.error("Error processing appearance settings: %s", e)
-                errors["base"] = "unknown"
+                errors["base": "unknown"
 
         schema = vol.Schema({
             # Clear settings
