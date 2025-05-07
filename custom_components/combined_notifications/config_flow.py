@@ -1,8 +1,19 @@
 """Config flow for Combined Notifications integration."""
+import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from .const import DOMAIN
+from homeassistant.helpers import selector
+from .const import DOMAIN, COLORS, OPERATORS, OPERATOR_MAP
+
+_LOGGER = logging.getLogger(__name__)
+
+CONDITION_SCHEMA = vol.Schema({
+    vol.Required("entity_id"): str,
+    vol.Required("operator"): vol.In([OPERATOR_MAP[op] for op in OPERATORS]),
+    vol.Required("trigger_value"): str,
+    vol.Optional("name"): str,
+})
 
 class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Combined Notifications."""
