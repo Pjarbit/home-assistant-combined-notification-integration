@@ -3,7 +3,6 @@ import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.helpers import selector
 from .const import DOMAIN, COLORS, OPERATORS, OPERATOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,12 +22,14 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            user_input["friendly_sensor_name"] = user_input.get("friendly_sensor_name", "")
+            # Default friendly_sensor_name to name if empty
+            if not user_input["friendly_sensor_name"].strip():
+                user_input["friendly_sensor_name"] = user_input["name"]
             return self.async_create_entry(title=user_input["name"], data=user_input)
 
         schema = vol.Schema({
             vol.Required("name"): str,
-            vol.Optional("friendly_sensor_name", default=""): str,
+            vol.Required("friendly_sensor_name", default=""): str,
         })
 
         return self.async_show_form(
