@@ -1,3 +1,10 @@
 {
   "name": "Combined Notifications Integration",
+  "content_in_root": false,
+  "zip_release": false,
+  "filename": "custom_components/combined_notifications/manifest.json",
+  "domains": ["combined_notifications"],
+  "country": ["US"],
+  "iot_class": "local_polling",
+  "render_readme": true
 }
