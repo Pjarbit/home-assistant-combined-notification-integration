@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback, Event
 from homeassistant.helpers.entity import Entity, EntityCategory
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import logging
-from .const import COLOR_MAP, DOMAIN
+from .const import COLOR_MAP, DOMAIN, OPERATOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ async def async_setup_entry(
     }
 
     async_add_entities([
-        CombinedNotificationSensor(hass, config_entry, name, conditions, settings)
+        CombinedNotificationSensor(hass, config_entry, name, friendly_sensor_name, conditions, settings)
     ])
 
     return None
@@ -62,6 +62,7 @@ class CombinedNotificationSensor(Entity):
         hass: HomeAssistant,
         config_entry: ConfigEntry,
         name: str,
+        friendly_sensor_name: str | None,
         conditions: list[dict],
         settings: dict[str, Any],
     ) -> None:
@@ -70,7 +71,8 @@ class CombinedNotificationSensor(Entity):
         self._hass = hass
         self._config_entry = config_entry
         self._attr_unique_id = config_entry.entry_id
-        self._attr_name = name  # Original name assignment
+        self._attr_name = name
+        self._friendly_sensor_name = friendly_sensor_name
         self._conditions = conditions
         self._settings = settings
         self._state = settings["text_all_clear"]
@@ -111,6 +113,7 @@ class CombinedNotificationSensor(Entity):
             "conditions": self._conditions,
             "all_clear_text": self._settings["text_all_clear"],
             "alert_mode": self._alert_mode,
+            "friendly_sensor_name": self._friendly_sensor_name,
         }
         return attributes
 
@@ -150,6 +153,7 @@ class CombinedNotificationSensor(Entity):
             "text_color": new_text_color,
             "icon_color": new_icon_color,
             "hide_title": self._settings["hide_title"],
+            "friendly_sensor_name": self._friendly_sensor_name, # Ensure it's in attributes
         }
 
     async def async_update_conditions(self, new_conditions: list[dict]) -> None:
