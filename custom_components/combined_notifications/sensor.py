@@ -20,7 +20,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the combined notification sensor from a config entry."""
     name = config_entry.data["name"]
-    friendly_sensor_name = config_entry.data.get("friendly_sensor_name")
+    friendly_sensor_name = config_entry.data["friendly_sensor_name"]
     conditions = config_entry.data.get("conditions", [])
     settings = {
         "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
@@ -51,7 +51,7 @@ async def async_setup_entry(
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
 
-    def __init__(self, hass: HomeAssistant, name: str, friendly_sensor_name: str | None, conditions: list[dict], settings: dict[str, Any], entry_id: str):
+    def __init__(self, hass: HomeAssistant, name: str, friendly_sensor_name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
