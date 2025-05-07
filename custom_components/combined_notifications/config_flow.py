@@ -33,13 +33,11 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if any(entry.data.get("name") == name for entry in self._async_current_entries()):
                 errors["name"] = "already_configured"
             else:
-                # Store friendly_name separately if needed
-                self._data["friendly_name"] = user_input.get("friendly_name", name)  
                 return await self.async_step_appearance()
 
         schema = vol.Schema({
             vol.Required("name"): str,
-            vol.Optional("friendly_name", default=""): str, # Make it optional here
+            vol.Required("friendly_sensor_name"): str,
         })
 
         return self.async_show_form(
@@ -49,27 +47,56 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_appearance(self, user_input=None):
-        """Handle the appearance settings step."""
+        """Handle appearance settings."""
         errors = {}
-        if user_input is not None:
-            self._data.update(user_input)
-            return self.async_create_entry(title=self._data["name"], data=self._data)  # Use name for title
 
-        schema = vol.Schema({
-            vol.Optional("text_all_clear", default="ALL CLEAR"): str,
-            vol.Optional("icon_all_clear", default="mdi:hand-okay"): str,
-            vol.Optional("icon_alert", default="mdi:alert-circle"): str,
-            vol.Optional("background_color_all_clear", default="Green"): vol.In(COLORS),
-            vol.Optional("background_color_alert", default="Red"): vol.In(COLORS),
-            vol.Optional("text_color_all_clear", default=""): vol.In(COLORS),
-            vol.Optional("text_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("icon_color_all_clear", default=""): vol.In(COLORS),
-            vol.Optional("icon_color_alert", default=""): vol.In(COLORS),
-            vol.Optional("hide_title", default=False): bool,
-        })
+        if user_input is not None:
+            try:
+                # Validate color inputs
+                for key in ["background_color_all_clear", "background_color_alert", "text_color_all_clear", "text_color_alert", "icon_color_all_clear", "icon_color_alert"]:
+                    if key in user_input and user_input[key] and user_input[key] not in COLORS:
+                        raise vol.Invalid(f"Invalid color for {key}: {user_input[key]}")
+                self._data.update(user_input)
+                _LOGGER.debug("Appearance settings updated: %s", user_input)
+                return await self.async_step_add_condition()
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in appearance settings: %s", e)
+                errors["base"] = "invalid_input"
+            except Exception as e:
+                _LOGGER.error("Error processing appearance settings: %s", e)
+                errors["base"] = "unknown"
+
+            return self.async_show_form(
+                step_id="appearance",
+                data_schema=vol.Schema({
+                    vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+                    vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
+                    vol.Required("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
+                    vol.Optional("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
+                    vol.Optional("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
+                    vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "")): vol.In(COLORS),
+                    vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
+                    vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
+                    vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
+                    vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
+                }),
+                errors=errors
+            )
+
         return self.async_show_form(
             step_id="appearance",
-            data_schema=schema,
+            data_schema=vol.Schema({
+                vol.Required("text_all_clear", default="ALL CLEAR"): str,
+                vol.Optional("icon_all_clear", default="mdi:hand-okay"): str,
+                vol.Required("icon_alert", default="mdi:alert-circle"): str,
+                vol.Optional("background_color_all_clear", default="Green"): vol.In(COLORS),
+                vol.Optional("background_color_alert", default="Red"): vol.In(COLORS),
+                vol.Optional("text_color_all_clear", default=""): vol.In(COLORS),
+                vol.Optional("text_color_alert", default=""): vol.In(COLORS),
+                vol.Optional("icon_color_all_clear", default=""): vol.In(COLORS),
+                vol.Optional("icon_color_alert", default=""): vol.In(COLORS),
+                vol.Optional("hide_title", default=False): bool,
+            }),
             errors=errors,
         )
 
