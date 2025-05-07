@@ -23,12 +23,12 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            user_input["friendly_sensor_name"] = user_input.get("friendly_sensor_name", "") # Add this line
+            user_input["friendly_sensor_name"] = user_input.get("friendly_sensor_name", "")
             return self.async_create_entry(title=user_input["name"], data=user_input)
 
         schema = vol.Schema({
             vol.Required("name"): str,
-            vol.Optional("friendly_sensor_name", default=""): str,  # And this line
+            vol.Optional("friendly_sensor_name", default=""): str,
         })
 
         return self.async_show_form(
@@ -95,7 +95,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             if user_input["add_another"]:
                 return await self.async_step_add_condition()
-            return await self.async_step_appearance()  # Go back to appearance
+            return await self.async_step_appearance()
 
         self._conditions = self.config_entry.options.get("conditions", [])
         return self.async_show_form(
