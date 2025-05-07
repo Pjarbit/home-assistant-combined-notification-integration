@@ -1,3 +1,4 @@
+# const.py
 """Constants for the Combined Notifications integration."""
 
 DOMAIN = "combined_notifications"
@@ -37,6 +38,5 @@ COLOR_MAP = {
     "White": "rgb(255, 255, 255)",
     "Black": "rgb(0, 0, 0)",
     "Teal": "rgb(0, 128, 128)",
-    "Transparent Background": "transparent",
-    "Use YOUR Current Theme Color": "var(--primary-background-color)"  # CSS variable for theme background
+    "Transparent Background": "transparent"
 }
