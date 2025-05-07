@@ -3,9 +3,10 @@
     "step": {
       "user": {
         "title": "Basic Settings",
-        "description": "Set up a name and default text.",
+        "description": "Set up a name and an optional friendly name for the notification.",
         "data": {
           "name": "Notification Name",
+          "friendly_name": "Friendly Name (Optional)",
           "text_all_clear": "Text when All Clear"
         }
       },
@@ -20,7 +21,8 @@
           "icon_all_clear": "Icon (Clear)",
           "icon_alert": "Icon (Alert)",
           "icon_color_all_clear": "Icon Color (Clear)",
-          "icon_color_alert": "Icon Color (Alert)"
+          "icon_color_alert": "Icon Color (Alert)",
+          "hide_title": "Hide Title"
         }
       },
       "add_condition": {
@@ -35,19 +37,69 @@
       },
       "confirm_conditions": {
         "title": "Confirm Conditions",
-        "description": "Current conditions:\n{conditions}\n\nAdd another condition or create the notification?",
+        "description": "Current conditions:\\n{conditions}\\n\\nAdd another condition or create the notification?",
         "data": {
           "add_another": "Add another condition"
+        }
+      },
+      "list_conditions": {
+        "title": "Current Conditions",
+        "description": "Current conditions:\\n{conditions}\\n\\nAdd another condition or save?",
+        "data": {
+          "add_another": "Add another condition"
+        }
+      },
+      "edit_condition": {
+        "title": "Edit Condition",
+        "description": "Edit the condition settings.",
+        "data": {
+          "entity_id": "Entity",
+          "operator": "Operator",
+          "trigger_value": "Trigger Value",
+          "name": "Optional Label"
+        }
+      },
+      "delete_condition": {
+        "title": "Delete Condition",
+        "description": "Are you sure you want to delete this condition?",
+        "data": {
+          "confirm_delete": "Confirm Delete"
         }
       }
     },
     "error": {
       "already_configured": "A notification with this name already exists.",
-      "no_conditions": "You must add at least one condition before continuing."
+      "no_conditions": "You must add at least one condition before continuing.",
+      "invalid_input": "Invalid input provided.",
+      "unknown": "An unknown error occurred."
     },
     "abort": {
       "already_configured": "A notification with this name already exists.",
       "no_conditions": "Setup aborted: at least one condition is required."
+    },
+    "options": {
+      "step": {
+        "init": {
+          "title": "Options",
+          "description": "Configure the appearance settings."
+        },
+        "options": {
+          "title": "Options",
+          "description": "Configure the appearance settings.",
+          "data": {
+            "text_all_clear": "Text when All Clear",
+            "icon_all_clear": "Icon (Clear)",
+            "icon_alert": "Icon (Alert)",
+            "background_color_all_clear": "Background Color (Clear)",
+            "background_color_alert": "Background Color (Alert)",
+            "text_color_all_clear": "Text Color (Clear)",
+            "text_color_alert": "Text Color (Alert)",
+            "icon_color_all_clear": "Icon Color (Clear)",
+            "icon_color_alert": "Icon Color (Alert)",
+            "hide_title": "Hide Title"
+          }
+        }
+      }
     }
   }
 }
