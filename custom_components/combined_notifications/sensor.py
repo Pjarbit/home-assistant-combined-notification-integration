@@ -29,7 +29,7 @@ async def async_setup_entry(
             "alert": config_entry.data.get("icon_alert", "mdi:alert-circle"),
         },
         "colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear", "Use YOUR Current Theme Color"), "rgb(19, 161, 14)"),
+            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear", "Green"), "rgb(19, 161, 14)"),
             "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert", "Red"), "rgb(190, 11, 11)"),
         },
         "text_colors": {
@@ -116,117 +116,4 @@ class CombinedNotificationSensor(Entity):
             "icon_color_clear": self._settings["icon_colors"]["clear"],
             "icon_color_alert": self._settings["icon_colors"]["alert"],
             "is_clear": not bool(self._unmet),
-            "hide_title": self._settings["hide_title"],
-            "hide_title_alert": self._settings["hide_title_alert"],
-            "friendly_sensor_name": self._friendly_sensor_name,
-        }
-
-    @callback
-    def _state_change_listener(self, event):
-        """Handle entity state changes with debouncing."""
-        if self._debounced_update_task:
-            self._debounced_update_task.cancel()
-            self._debounced_update_task = None
-
-        async def debounced_update():
-            """Perform the actual update."""
-            _LOGGER.debug(f"Debounced update triggered by: {event.data.get('entity_id')}")
-            self.async_schedule_update_ha_state(True)
-            self._debounced_update_task = None
-
-        self._debounced_update_task = self._hass.async_create_task(debounced_update())
-
-    async def async_added_to_hass(self) -> None:
-        """Set up listeners when the sensor is added to Home Assistant."""
-        for condition in self._conditions:
-            entity_id = condition["entity_id"]
-            unsub = async_track_state_change_event(
-                self._hass, [entity_id], self._state_change_listener
-            )
-            self._unsubscribe_callbacks.append(unsub)
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Clean up listeners when the sensor is removed from Home Assistant."""
-        for unsub in self._unsubscribe_callbacks:
-            unsub()
-        self._unsubscribe_callbacks.clear()
-        if self._debounced_update_task:
-            self._debounced_update_task.cancel()
-            self._debounced_update_task = None
-
-    async def async_update(self) -> None:
-        """Update the sensor state by evaluating all conditions."""
-        self._unmet = []
-        for condition in self._conditions:
-            entity_id = condition.get("entity_id")
-            operator = condition.get("operator", "==")
-            expected = condition.get("trigger_value")
-            label = condition.get("name", entity_id)
-
-            state_obj = self._hass.states.get(entity_id)
-            if state_obj is None or state_obj.state in ("unknown", "unavailable"):
-                continue
-
-            actual = state_obj.state
-            if self._evaluate_condition(actual, expected, operator):
-                self._unmet.append(label)
-
-        state = self._settings["text_all_clear"] if not self._unmet else ", ".join(self._unmet)
-        self._state = state[:255]
-        if len(state) > 255:
-            _LOGGER.warning("State truncated to 255 characters, original length: %s", len(state))
-        self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
-
-    async def async_update_conditions(self, new_conditions: list[dict]) -> None:
-        """Update sensor conditions dynamically."""
-        _LOGGER.debug("Updating conditions: %s", new_conditions)
-        for unsub in self._unsubscribe_callbacks:
-            unsub()
-        self._unsubscribe_callbacks.clear()
-        self._conditions = [c for c in new_conditions if self._validate_condition(c)]
-        for condition in self._conditions:
-            unsub = async_track_state_change_event(
-                self._hass, [condition["entity_id"]], self._state_change_listener
-            )
-            self._unsubscribe_callbacks.append(unsub)
-        await self.async_update()
-
-    async def async_update_settings(self, new_settings: dict[str, Any], new_conditions: list[dict]) -> None:
-        """Update sensor settings and conditions dynamically."""
-        try:
-            _LOGGER.debug("Received settings update: %s, conditions: %s", new_settings, new_conditions)
-            self._settings = new_settings
-            self._state = new_settings["text_all_clear"][:255]
-            self._attr_icon = new_settings["icons"]["clear"]
-            await self.async_update_conditions(new_conditions)
-            await self.async_update()
-            self.async_schedule_update_ha_state(True)
-            _LOGGER.debug("Settings and conditions updated successfully")
-        except Exception as e:
-            _LOGGER.error("Error updating settings: %s", e)
-            raise
-
-    def _evaluate_condition(self, actual: str, expected: str, operator: str) -> bool:
-        """Evaluate a condition using safe comparisons."""
-        try:
-            if operator == "==":
-                return str(actual) == str(expected)
-            if operator == "!=":
-                return str(actual) != str(expected)
-            if operator == ">":
-                try:
-                    return float(actual) > float(expected)
-                except ValueError:
-                    return str(actual) > str(expected)
-            if operator == "<":
-                try:
-                    return float(actual) < float(expected)
-                except ValueError:
-                    return str(actual) < str(expected)
-        except Exception as err:
-            _LOGGER.warning(
-                "Failed to compare %s %s %s: %s",
-                actual, operator, expected, err
-            )
-            return False
-        return False
+            "hide_title": self._settings["
