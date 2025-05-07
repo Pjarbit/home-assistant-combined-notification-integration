@@ -1,4 +1,3 @@
-# const.py
 """Constants for the Combined Notifications integration."""
 
 DOMAIN = "combined_notifications"
