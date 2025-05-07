@@ -29,16 +29,16 @@ async def async_setup_entry(
             "alert": config_entry.data.get("icon_alert", "mdi:alert-circle"),
         },
         "colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear"), "Green"),
-            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert"), "Red"),
+            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear", "Use YOUR Current Theme Color"), "rgb(19, 161, 14)"),
+            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert", "Red"), "rgb(190, 11, 11)"),
         },
         "text_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", ""), ""),
-            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", ""), ""),
+            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", "Use YOUR Current Theme Color"), ""),
+            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", "Use YOUR Current Theme Color"), ""),
         },
         "icon_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", ""), ""),
-            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", ""), ""),
+            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", "Use YOUR Current Theme Color"), ""),
+            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", "Use YOUR Current Theme Color"), ""),
         },
         "hide_title": str(config_entry.data.get("hide_title", False)).lower() == "true",
         "hide_title_alert": str(config_entry.data.get("hide_title_alert", False)).lower() == "true",
