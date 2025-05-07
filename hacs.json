@@ -1,6 +1,3 @@
 {
   "name": "Combined Notifications Integration",
-  "domain": "combined_notifications",
-  "codeowners": ["@Pjarbit"],
-  "version": "2.0.0"
 }
