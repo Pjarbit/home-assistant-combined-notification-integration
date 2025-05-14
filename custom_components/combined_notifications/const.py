@@ -33,7 +33,7 @@ OPERATOR_MAP = {
 COLOR_MAP = {
     "Use YOUR Current Theme Color": "",
     "Red": "rgb(190, 11, 11)",
-    "Green": "rgb(19, 161, 14)",
+    "Green": "rgb(38,141,53)",
     "Blue": "rgb(2, 136, 209)",
     "Yellow": "rgb(255, 215, 0)",
     "Orange": "rgb(255, 140, 0)",
