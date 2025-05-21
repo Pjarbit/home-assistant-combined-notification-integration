@@ -1,228 +1,529 @@
-"""Sensor platform for Combined Notifications."""
-from __future__ import annotations
-
-from typing import Any
-
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity, EntityCategory
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+"""Config flow for Combined Notifications integration."""
 import logging
-from .const import COLOR_MAP, DOMAIN
+import voluptuous as vol
+from homeassistant import config_entries
+from homeassistant.core import callback
+from homeassistant.helpers import selector
+from .const import DOMAIN, COLORS, OPERATORS, OPERATOR_MAP, COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the combined notification sensor from a config entry."""
-    name = config_entry.data["name"]
-    friendly_sensor_name = config_entry.data["friendly_sensor_name"]
-    conditions = config_entry.data.get("conditions", [])
-    settings = {
-        "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
-        "icons": {
-            "clear": config_entry.data.get("icon_all_clear", "mdi:hand-okay"),
-            "alert": config_entry.data.get("icon_alert", "mdi:alert-circle"),
-        },
-        "colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear", "Green"), "rgb(19, 161, 14)"),
-            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert", "Red"), "rgb(190, 11, 11)"),
-        },
-        "text_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", "Use YOUR Current Theme Color"), ""),
-            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", "Use YOUR Current Theme Color"), ""),
-        },
-        "icon_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", "Use YOUR Current Theme Color"), ""),
-            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", "Use YOUR Current Theme Color"), ""),
-        },
-        "hide_title": str(config_entry.data.get("hide_title", False)).lower() == "true",
-        "hide_title_alert": str(config_entry.data.get("hide_title_alert", False)).lower() == "true",
-    }
+class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Combined Notifications."""
+    VERSION = 1
 
-    sensor = CombinedNotificationSensor(hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id)
-    async_add_entities([sensor], update_before_add=True)
-    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
+    def __init__(self):
+        """Initialize the config flow."""
+        self._data = {}
+        self._conditions = []
 
-class CombinedNotificationSensor(Entity):
-    """Representation of a Combined Notification sensor."""
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return CombinedNotificationsOptionsFlow(config_entry)
 
-    def __init__(self, hass: HomeAssistant, name: str, friendly_sensor_name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
-        """Initialize the sensor."""
-        self._hass = hass
-        self._name = name
-        self._friendly_sensor_name = friendly_sensor_name
-        self._entry_id = entry_id
-        self._conditions = [
-            condition for condition in conditions if self._validate_condition(condition)
-        ]
-        for condition in conditions:
-            if not self._validate_condition(condition):
-                _LOGGER.warning("Skipping malformed condition in %s: %s", name, condition)
-        self._settings = settings
-        self._state = settings["text_all_clear"]
-        self._unmet = []
-        self._unsubscribe_callbacks = []
-        self._debounced_update_task = None
+    async def async_step_user(self, user_input=None):
+        """Handle the initial step."""
+        errors = {}
 
-        self._attr_has_entity_name = True
-        self._attr_should_poll = False
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._attr_icon = settings["icons"]["clear"]
+        if user_input is not None:
+            # Default friendly_sensor_name to name if empty
+            if not user_input["friendly_sensor_name"].strip():
+                user_input["friendly_sensor_name"] = user_input["name"]
+            self._data.update(user_input)
+            name = user_input.get("name")
+            if any(entry.data.get("name") == name for entry in self._async_current_entries()):
+                errors["name"] = "already_configured"
+            else:
+                return await self.async_step_appearance()
 
-    def _validate_condition(self, condition: dict) -> bool:
-        """Validate that a condition has all required keys."""
-        required_keys = ["entity_id", "operator", "trigger_value"]
-        return all(key in condition for key in required_keys)
+        schema = vol.Schema({
+            vol.Required("name"): str,
+            vol.Required("friendly_sensor_name", default=""): str,
+        })
 
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this entity."""
-        return f"combined_notifications_{self._entry_id}"
-
-    @property
-    def state(self) -> str:
-        """Return the state of the sensor."""
-        return self._state
-
-    @property
-    def icon(self) -> str:
-        """Return the icon to use in the frontend."""
-        return self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional attributes for the sensor."""
-        return {
-            "unmet_conditions": self._unmet,
-            "number_unmet": len(self._unmet),
-            "number_total": len(self._conditions),
-            "text_all_clear": self._settings["text_all_clear"],
-            "icon_clear": self._settings["icons"]["clear"],
-            "icon_alert": self._settings["icons"]["alert"],
-            "color_clear": self._settings["colors"]["clear"],
-            "color_alert": self._settings["colors"]["alert"],
-            "text_color_clear": self._settings["text_colors"]["clear"],
-            "text_color_alert": self._settings["text_colors"]["alert"],
-            "icon_color_clear": self._settings["icon_colors"]["clear"],
-            "icon_color_alert": self._settings["icon_colors"]["alert"],
-            "is_clear": not bool(self._unmet),
-            "hide_title": self._settings["hide_title"],
-            "hide_title_alert": self._settings["hide_title_alert"]
-        }
-
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity is added to Home Assistant."""
-        # Set up state tracking for all conditions
-        entity_ids = [condition["entity_id"] for condition in self._conditions]
-        
-        self._unsubscribe_callbacks.append(
-            async_track_state_change_event(
-                self.hass, entity_ids, self._async_state_change_callback
-            )
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            errors=errors
         )
-        
-        # Update initial state
-        await self._async_update_state()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Clean up when entity is removed from Home Assistant."""
-        # Unsubscribe from all state change events
-        for unsubscribe in self._unsubscribe_callbacks:
-            unsubscribe()
-        self._unsubscribe_callbacks = []
+    async def async_step_appearance(self, user_input=None):
+        """Handle appearance settings."""
+        errors = {}
+
+        if user_input is not None:
+            try:
+                # Validate color inputs
+                for key in ["background_color_all_clear", "background_color_alert", "text_color_all_clear", "text_color_alert", "icon_color_all_clear", "icon_color_alert"]:
+                    if key in user_input and user_input[key] and user_input[key] not in COLORS:
+                        raise vol.Invalid(f"Invalid color for {key}: {user_input[key]}")
+                self._data.update(user_input)
+                _LOGGER.debug("Appearance settings updated: %s", user_input)
+                return await self.async_step_add_condition()
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in appearance settings: %s", e)
+                errors["base"] = "invalid_input"
+            except Exception as e:
+                _LOGGER.error("Error processing appearance settings: %s", e)
+                errors["base"] = "unknown"
+
+        schema = vol.Schema({
+            # Clear settings
+            vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+            vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
+            vol.Required("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
+            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
+            # Alert settings
+            vol.Optional("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
+            vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
+            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("hide_title_alert", default=self._data.get("hide_title_alert", False)): bool,
+        })
+
+        return self.async_show_form(
+            step_id="appearance",
+            data_schema=schema,
+            errors=errors
+        )
+
+    async def async_step_add_condition(self, user_input=None):
+        """Step to add a condition entity."""
+        errors = {}
+
+        if user_input is not None:
+            try:
+                operator = OPERATOR_MAP[user_input["operator"]]
+                condition = {
+                    "entity_id": user_input["entity_id"],
+                    "operator": operator,
+                    "trigger_value": user_input["trigger_value"],
+                    "name": user_input.get("name", user_input["entity_id"])
+                }
+                self._conditions.append(condition)
+                return await self.async_step_confirm_conditions()
+            except Exception as e:
+                _LOGGER.error("Error adding condition: %s", e)
+                errors["base"] = "unknown"
+
+        schema = vol.Schema({
+            vol.Required("entity_id"): selector.EntitySelector(),
+            vol.Required("operator", default="equals (==)"): vol.In(OPERATORS),
+            vol.Required("trigger_value"): str,
+            vol.Optional("name"): str,
+        })
+
+        return self.async_show_form(
+            step_id="add_condition",
+            data_schema=schema,
+            errors=errors
+        )
+
+    async def async_step_confirm_conditions(self, user_input=None):
+        """Confirm conditions or add more."""
+        if user_input is not None:
+            if user_input.get("add_another"):
+                return await self.async_step_add_condition()
+            else:
+                return self._create_entry()
+
+        condition_list = "\n".join(
+            f"- {c.get('name', c['entity_id'])} ({c['entity_id']} {c['operator']} {c['trigger_value']})"
+            for c in self._conditions
+        )
+
+        if not condition_list:
+            condition_list = "No conditions added yet. Add at least one condition."
+
+        schema = vol.Schema({
+            vol.Required("add_another", default=False): bool,
+        })
+
+        return self.async_show_form(
+            step_id="confirm_conditions",
+            data_schema=schema,
+            description_placeholders={"conditions": condition_list}
+        )
 
     @callback
-    async def _async_state_change_callback(self, event) -> None:
-        """Handle entity state changes."""
-        await self._async_update_state()
+    def _create_entry(self):
+        """Create the config entry."""
+        if not self._conditions:
+            return self.async_abort(reason="no_conditions")
 
-    async def _async_update_state(self) -> None:
-        """Update sensor state based on condition states."""
-        unmet = []
-        
-        for condition in self._conditions:
-            entity_id = condition["entity_id"]
-            operator = condition["operator"]
-            trigger_value = condition["trigger_value"]
-            name = condition.get("name", entity_id)
-            
-            # Skip if entity doesn't exist
-            if not self.hass.states.get(entity_id):
-                _LOGGER.warning("Entity %s not found, skipping condition check", entity_id)
-                continue
-                
-            # Get current state of entity
-            state = self.hass.states.get(entity_id).state
-            
-            # Check if condition is met based on operator
-            condition_met = False
-            
+        return self.async_create_entry(
+            title=self._data["name"],
+            data={
+                **self._data,
+                "conditions": self._conditions
+            }
+        )
+
+class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
+    """Handle options flow for Combined Notifications."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self._data = dict(config_entry.data)
+        self._conditions = list(config_entry.data.get("conditions", []))
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Initial step for options flow."""
+        return await self.async_step_menu()
+
+    async def async_step_menu(self, user_input=None):
+        """Show menu for options flow."""
+        if user_input is not None:
             try:
-                # Convert values for numeric comparison if possible
-                if state.replace(".", "", 1).isdigit() and trigger_value.replace(".", "", 1).isdigit():
-                    state_val = float(state)
-                    trigger_val = float(trigger_value)
-                    
-                    if operator == "equals":
-                        condition_met = state_val == trigger_val
-                    elif operator == "not equals":
-                        condition_met = state_val != trigger_val
-                    elif operator == "greater than":
-                        condition_met = state_val > trigger_val
-                    elif operator == "less than":
-                        condition_met = state_val < trigger_val
-                else:
-                    # String comparison
-                    if operator == "equals":
-                        condition_met = state == trigger_value
-                    elif operator == "not equals":
-                        condition_met = state != trigger_value
-                    # String greater/less than comparison not supported
-                    elif operator in ["greater than", "less than"]:
-                        condition_met = False
-                        _LOGGER.warning("String comparison with %s not supported for %s", operator, entity_id)
-            except (ValueError, TypeError) as e:
-                _LOGGER.error("Error comparing values for %s: %s", entity_id, e)
-                condition_met = False
-            
-            # If condition is not met, add to unmet list
-            if not condition_met:
-                unmet.append(name)
-        
-        # Update state based on unmet conditions
-        if unmet:
-            self._state = ", ".join(unmet)
-            self._attr_icon = self._settings["icons"]["alert"]
-        else:
-            self._state = self._settings["text_all_clear"]
-            self._attr_icon = self._settings["icons"]["clear"]
-        
-        self._unmet = unmet
-        self.async_write_ha_state()
+                menu_option = user_input.get("menu_option")
+                _LOGGER.debug("Menu option selected: %s", menu_option)
+                if menu_option == "basic_settings":
+                    return await self.async_step_basic_settings()
+                elif menu_option == "appearance":
+                    return await self.async_step_appearance()
+                elif menu_option == "manage_conditions":
+                    return await self.async_step_manage_conditions()
+                elif menu_option == "save_changes":
+                    if not self.config_entry:
+                        _LOGGER.error("Config entry is None, cannot save options")
+                        return self.async_show_form(
+                            step_id="menu",
+                            data_schema=self._get_menu_schema(),
+                            errors={"base": "no_config_entry"}
+                        )
+                    sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+                    _LOGGER.debug("Sensor retrieved: %s, hass.data[DOMAIN]: %s", sensor, self.hass.data.get(DOMAIN, {}))
+                    # Prepare settings in the same format as sensor.py
+                    settings = {
+                        "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
+                        "icons": {
+                            "clear": self._data.get("icon_all_clear", "mdi:hand-okay"),
+                            "alert": self._data.get("icon_alert", "mdi:alert-circle"),
+                        },
+                        "colors": {
+                            "clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Green"), "rgb(19, 161, 14)"),
+                            "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "rgb(190, 11, 11)"),
+                        },
+                        "text_colors": {
+                            "clear": COLOR_MAP.get(self._data.get("text_color_all_clear", "Use YOUR Current Theme Color"), ""),
+                            "alert": COLOR_MAP.get(self._data.get("text_color_alert", "Use YOUR Current Theme Color"), ""),
+                        },
+                        "icon_colors": {
+                            "clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", "Use YOUR Current Theme Color"), ""),
+                            "alert": COLOR_MAP.get(self._data.get("icon_color_alert", "Use YOUR Current Theme Color"), ""),
+                        },
+                        "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
+                        "hide_title_alert": str(self._data.get("hide_title_alert", False)).lower() == "true",
+                    }
+                    _LOGGER.debug("Attempting to save settings: %s, conditions: %s", settings, self._conditions)
+                    if sensor and hasattr(sensor, "async_update_settings"):
+                        await sensor.async_update_settings(settings, self._conditions)
+                        _LOGGER.debug("Dynamic sensor update triggered")
+                    else:
+                        _LOGGER.warning("Sensor not available for dynamic update, entry_id: %s", self.config_entry.entry_id)
+                    # Save config entry without triggering reload
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={
+                            **self._data,
+                            "conditions": self._conditions
+                        }
+                    )
+                    # Reload config entry to ensure sensor updates
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    _LOGGER.debug("Settings and conditions saved, config entry reloaded")
+                    return self.async_create_entry(title="", data={})
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in saving options: %s", e)
+                return self.async_show_form(
+                    step_id="menu",
+                    data_schema=self._get_menu_schema(),
+                    errors={"base": "invalid_input"}
+                )
+            except Exception as e:
+                _LOGGER.error("Unexpected error saving options: %s", e)
+                return self.async_show_form(
+                    step_id="menu",
+                    data_schema=self._get_menu_schema(),
+                    errors={"base": "unknown"}
+                )
 
-    async def async_update_settings(self, settings: dict[str, Any], conditions: list[dict]) -> None:
-        """Update settings and conditions dynamically."""
-        _LOGGER.debug("Updating settings: %s", settings)
-        self._settings = settings
-        
-        # Validate conditions
-        self._conditions = [
-            condition for condition in conditions if self._validate_condition(condition)
-        ]
-        for condition in conditions:
-            if not self._validate_condition(condition):
-                _LOGGER.warning("Skipping malformed condition: %s", condition)
-        
-        # Update state based on new settings
-        await self._async_update_state()
-        _LOGGER.debug("Settings updated, new state: %s", self._state)
+        return self.async_show_form(
+            step_id="menu",
+            data_schema=self._get_menu_schema(),
+            description_placeholders={"name": self._data.get("name", "Unknown")}
+        )
+
+    def _get_menu_schema(self):
+        """Return the menu schema."""
+        return vol.Schema({
+            vol.Required("menu_option", default="basic_settings"): vol.In({
+                "basic_settings": "Edit Basic Settings",
+                "appearance": "Edit Appearance",
+                "manage_conditions": "Manage Conditions",
+                "save_changes": "Save All Changes"
+            })
+        })
+
+    async def async_step_basic_settings(self, user_input=None):
+        """Handle the basic settings step."""
+        errors = {}
+
+        if user_input is not None:
+            try:
+                self._data.update({
+                    "text_all_clear": user_input.get("text_all_clear")
+                })
+                _LOGGER.debug("Basic settings updated: %s", user_input)
+                return await self.async_step_menu()
+            except Exception as e:
+                _LOGGER.error("Error processing basic settings: %s", e)
+                errors["base"] = "unknown"
+
+        schema = vol.Schema({
+            vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+        })
+
+        return self.async_show_form(
+            step_id="basic_settings",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"name": self._data.get("name", "Unknown")}
+        )
+
+    async def async_step_appearance(self, user_input=None):
+        """Handle appearance settings."""
+        errors = {}
+
+        if user_input is not None:
+            try:
+                # Validate color inputs
+                for key in ["background_color_all_clear", "background_color_alert", "text_color_all_clear", "text_color_alert", "icon_color_all_clear", "icon_color_alert"]:
+                    if key in user_input and user_input[key] and user_input[key] not in COLORS:
+                        raise vol.Invalid(f"Invalid color for {key}: {user_input[key]}")
+                self._data.update(user_input)
+                _LOGGER.debug("Appearance settings updated: %s", user_input)
+                return await self.async_step_menu()
+            except vol.Invalid as e:
+                _LOGGER.error("Validation error in appearance settings: %s", e)
+                errors["base"] = "invalid_input"
+            except Exception as e:
+                _LOGGER.error("Error processing appearance settings: %s", e)
+                errors["base"] = "unknown"
+
+        schema = vol.Schema({
+            # Clear settings
+            vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+            vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
+            vol.Required("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
+            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
+            # Alert settings
+            vol.Optional("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
+            vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
+            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("hide_title_alert", default=self._data.get("hide_title_alert", False)): bool,
+        })
+
+        return self.async_show_form(
+            step_id="appearance",
+            data_schema=schema,
+            errors=errors
+        )
+
+    async def async_step_manage_conditions(self, user_input=None):
+        """Manage conditions menu."""
+        if user_input is not None:
+            try:
+                action = user_input.get("action")
+                _LOGGER.debug("Condition action selected: %s", action)
+                if action == "add":
+                    return await self.async_step_add_condition()
+                elif action == "list":
+                    return await self.async_step_list_conditions()
+                else:
+                    return await self.async_step_menu()
+            except Exception as e:
+                _LOGGER.error("Error processing condition action: %s", e)
+                return self.async_show_form(
+                    step_id="manage_conditions",
+                    data_schema=self._get_conditions_schema(),
+                    errors={"base": "unknown"}
+                )
+
+        return self.async_show_form(
+            step_id="manage_conditions",
+            data_schema=self._get_conditions_schema()
+        )
+
+    def _get_conditions_schema(self):
+        """Return the conditions schema."""
+        return vol.Schema({
+            vol.Required("action", default="list"): vol.In({
+                "list": "List and Edit Conditions",
+                "add": "Add New Condition",
+                "back": "Back to Main Menu"
+            })
+        })
+
+    async def async_step_list_conditions(self, user_input=None):
+        """List all conditions and allow selecting one to edit or delete."""
+        if user_input is not None:
+            try:
+                if user_input.get("condition_action") == "back":
+                    return await self.async_step_manage_conditions()
+
+                selected_index = user_input.get("condition_index")
+                action = user_input.get("condition_action")
+                _LOGGER.debug("Condition action: %s, index: %s", action, selected_index)
+
+                if action == "edit" and selected_index is not None:
+                    return await self.async_step_edit_condition({"index": int(selected_index)})
+                elif action == "delete" and selected_index is not None:
+                    self._conditions.pop(int(selected_index))
+                    return await self.async_step_list_conditions()
+            except Exception as e:
+                _LOGGER.error("Error processing list conditions: %s", e)
+                return self.async_show_form(
+                    step_id="list_conditions",
+                    data_schema=self._get_list_conditions_schema(),
+                    description_placeholders={"conditions": "Error occurred"},
+                    errors={"base": "unknown"}
+                )
+
+        if not self._conditions:
+            schema = vol.Schema({
+                vol.Required("condition_action", default="back"): vol.In({
+                    "back": "Back to Conditions Menu"
+                })
+            })
+            return self.async_show_form(
+                step_id="list_conditions",
+                data_schema=schema,
+                description_placeholders={"conditions": "No conditions have been added yet."}
+            )
+
+        condition_choices = {}
+        conditions_text = []
+
+        for i, condition in enumerate(self._conditions):
+            entity_id = condition.get("entity_id", "unknown")
+            name = condition.get("name", entity_id)
+            operator = condition.get("operator", "==")
+            value = condition.get("trigger_value", "")
+
+            condition_text = f"{name} ({entity_id} {operator} {value})"
+            conditions_text.append(f"- {condition_text}")
+            condition_choices[str(i)] = condition_text
+
+        conditions_display = "\n".join(conditions_text)
+
+        return self.async_show_form(
+            step_id="list_conditions",
+            data_schema=self._get_list_conditions_schema(),
+            description_placeholders={"conditions": conditions_display}
+        )
+
+    def _get_list_conditions_schema(self):
+        """Return the list conditions schema."""
+        condition_choices = {
+            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')})"
+            for i, condition in enumerate(self._conditions)
+        }
+        return vol.Schema({
+            vol.Optional("condition_index"): vol.In(condition_choices),
+            vol.Required("condition_action", default="back"): vol.In({
+                "edit": "Edit Selected Condition",
+                "delete": "Delete Selected Condition",
+                "back": "Back to Conditions Menu"
+            })
+        })
+
+    async def async_step_add_condition(self, user_input=None):
+        """Add a new condition."""
+        errors = {}
+
+        if user_input is not None:
+            try:
+                operator = OPERATOR_MAP[user_input["operator"]]
+                condition = {
+                    "entity_id": user_input["entity_id"],
+                    "operator": operator,
+                    "trigger_value": user_input["trigger_value"],
+                    "name": user_input.get("name", user_input["entity_id"])
+                }
+                self._conditions.append(condition)
+                _LOGGER.debug("Condition added: %s", condition)
+                return await self.async_step_manage_conditions()
+            except Exception as e:
+                _LOGGER.error("Error adding condition: %s", e)
+                errors["base"] = "unknown"
+
+        schema = vol.Schema({
+            vol.Required("entity_id"): selector.EntitySelector(),
+            vol.Required("operator", default="equals (==)"): vol.In(OPERATORS),
+            vol.Required("trigger_value"): str,
+            vol.Optional("name"): str,
+        })
+
+        return self.async_show_form(
+            step_id="add_condition",
+            data_schema=schema,
+            errors=errors
+        )
+
+    async def async_step_edit_condition(self, user_input=None):
+        """Edit an existing condition."""
+        errors = {}
+        index = user_input.get("index") if user_input else None
+
+        if index is None:
+            return await self.async_step_list_conditions()
+
+        try:
+            index = int(index)
+        except (TypeError, ValueError):
+            _LOGGER.error("Invalid condition index: %s", index)
+            return await self.async_step_list_conditions()
+
+        if index < 0 or index >= len(self._conditions):
+            _LOGGER.error("Condition index out of range: %s", index)
+            return await self.async_step_list_conditions()
+
+        condition = self._conditions[index]
+
+        if user_input and "entity_id" in user_input:
+            try:
+                operator = OPERATOR_MAP[user_input["operator"]]
+                self._conditions[index] = {
+                    "entity_id": user_input["entity_id"],
+                    "operator": operator,
+                    "trigger_value": user_input["trigger_value"],
+                    "name": user_input.get("name", user_input["entity_id"])
+                }
+                _LOGGER.debug("Condition edited: %s", self._conditions[index])
+                return await self.async_step_list_conditions()
+            except Exception as e:
+                _LOGGER.error("Error editing condition: %s", e)
+                errors["base"] = "unknown"
+
+        schema = vol.Schema({
+            vol.Required("entity_id", default=condition["entity_id"]): selector.EntitySelector(),
+            vol.Required("operator", default=[op for op in OPERATORS if OPERATOR_MAP[op] == condition["operator"]][0]): vol.In(OPERATORS),
+            vol.Required("trigger_value", default=condition["trigger_value"]): str,
+            vol.Optional("name", default=condition.get("name", condition["entity_id"])): str,
+            vol.Required("index", default=str(index)): str
+        })
+
+        return self.async_show_form(
+            step_id="edit_condition",
+            data_schema=schema,
+            errors=errors
+        )
