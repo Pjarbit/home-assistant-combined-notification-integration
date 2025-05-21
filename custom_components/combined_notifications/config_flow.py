@@ -28,9 +28,6 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Default friendly_sensor_name to name if empty
-            if not user_input["friendly_sensor_name"].strip():
-                user_input["friendly_sensor_name"] = user_input["name"]
             self._data.update(user_input)
             name = user_input.get("name")
             if any(entry.data.get("name") == name for entry in self._async_current_entries()):
@@ -40,7 +37,6 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema({
             vol.Required("name"): str,
-            vol.Required("friendly_sensor_name", default=""): str,
         })
 
         return self.async_show_form(
@@ -170,7 +166,6 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         """Initialize options flow."""
         self._data = dict(config_entry.data)
         self._conditions = list(config_entry.data.get("conditions", []))
-        self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Initial step for options flow."""
@@ -222,7 +217,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     }
                     _LOGGER.debug("Attempting to save settings: %s, conditions: %s", settings, self._conditions)
                     if sensor and hasattr(sensor, "async_update_settings"):
-                        await sensor.async_update_settings(settings, self._conditions)
+                        sensor.async_update_settings(settings, self._conditions)
                         _LOGGER.debug("Dynamic sensor update triggered")
                     else:
                         _LOGGER.warning("Sensor not available for dynamic update, entry_id: %s", self.config_entry.entry_id)
@@ -277,8 +272,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             try:
                 self._data.update({
-                    "text_all_clear": user_input.get("text_all_clear"),
-                    "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", ""))
+                    "text_all_clear": user_input.get("text_all_clear")
                 })
                 _LOGGER.debug("Basic settings updated: %s", user_input)
                 return await self.async_step_menu()
@@ -288,7 +282,6 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 
         schema = vol.Schema({
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
-            vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str,
         })
 
         return self.async_show_form(
@@ -387,9 +380,9 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 _LOGGER.debug("Condition action: %s, index: %s", action, selected_index)
 
                 if action == "edit" and selected_index is not None:
-                    return await self.async_step_edit_condition({"index": int(selected_index)})
+                    return await self.async_step_edit_condition({"index": selected_index})
                 elif action == "delete" and selected_index is not None:
-                    self._conditions.pop(int(selected_index))
+                    self._conditions.pop(selected_index)
                     return await self.async_step_list_conditions()
             except Exception as e:
                 _LOGGER.error("Error processing list conditions: %s", e)
@@ -423,7 +416,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 
             condition_text = f"{name} ({entity_id} {operator} {value})"
             conditions_text.append(f"- {condition_text}")
-            condition_choices[str(i)] = condition_text
+            condition_choices[i] = condition_text
 
         conditions_display = "\n".join(conditions_text)
 
@@ -436,7 +429,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
     def _get_list_conditions_schema(self):
         """Return the list conditions schema."""
         condition_choices = {
-            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')})"
+            i: f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')})"
             for i, condition in enumerate(self._conditions)
         }
         return vol.Schema({
@@ -489,16 +482,6 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         if index is None:
             return await self.async_step_list_conditions()
 
-        try:
-            index = int(index)
-        except (TypeError, ValueError):
-            _LOGGER.error("Invalid condition index: %s", index)
-            return await self.async_step_list_conditions()
-
-        if index < 0 or index >= len(self._conditions):
-            _LOGGER.error("Condition index out of range: %s", index)
-            return await self.async_step_list_conditions()
-
         condition = self._conditions[index]
 
         if user_input and "entity_id" in user_input:
@@ -521,7 +504,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             vol.Required("operator", default=[op for op in OPERATORS if OPERATOR_MAP[op] == condition["operator"]][0]): vol.In(OPERATORS),
             vol.Required("trigger_value", default=condition["trigger_value"]): str,
             vol.Optional("name", default=condition.get("name", condition["entity_id"])): str,
-            vol.Required("index", default=str(index)): str
+            vol.Required("index", default=index): str
         })
 
         return self.async_show_form(
