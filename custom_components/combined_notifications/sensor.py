@@ -116,4 +116,113 @@ class CombinedNotificationSensor(Entity):
             "icon_color_clear": self._settings["icon_colors"]["clear"],
             "icon_color_alert": self._settings["icon_colors"]["alert"],
             "is_clear": not bool(self._unmet),
-            "hide_title": self._settings["
+            "hide_title": self._settings["hide_title"],
+            "hide_title_alert": self._settings["hide_title_alert"]
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Register callbacks when entity is added to Home Assistant."""
+        # Set up state tracking for all conditions
+        entity_ids = [condition["entity_id"] for condition in self._conditions]
+        
+        self._unsubscribe_callbacks.append(
+            async_track_state_change_event(
+                self.hass, entity_ids, self._async_state_change_callback
+            )
+        )
+        
+        # Update initial state
+        await self._async_update_state()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Clean up when entity is removed from Home Assistant."""
+        # Unsubscribe from all state change events
+        for unsubscribe in self._unsubscribe_callbacks:
+            unsubscribe()
+        self._unsubscribe_callbacks = []
+
+    @callback
+    async def _async_state_change_callback(self, event) -> None:
+        """Handle entity state changes."""
+        await self._async_update_state()
+
+    async def _async_update_state(self) -> None:
+        """Update sensor state based on condition states."""
+        unmet = []
+        
+        for condition in self._conditions:
+            entity_id = condition["entity_id"]
+            operator = condition["operator"]
+            trigger_value = condition["trigger_value"]
+            name = condition.get("name", entity_id)
+            
+            # Skip if entity doesn't exist
+            if not self.hass.states.get(entity_id):
+                _LOGGER.warning("Entity %s not found, skipping condition check", entity_id)
+                continue
+                
+            # Get current state of entity
+            state = self.hass.states.get(entity_id).state
+            
+            # Check if condition is met based on operator
+            condition_met = False
+            
+            try:
+                # Convert values for numeric comparison if possible
+                if state.replace(".", "", 1).isdigit() and trigger_value.replace(".", "", 1).isdigit():
+                    state_val = float(state)
+                    trigger_val = float(trigger_value)
+                    
+                    if operator == "equals":
+                        condition_met = state_val == trigger_val
+                    elif operator == "not equals":
+                        condition_met = state_val != trigger_val
+                    elif operator == "greater than":
+                        condition_met = state_val > trigger_val
+                    elif operator == "less than":
+                        condition_met = state_val < trigger_val
+                else:
+                    # String comparison
+                    if operator == "equals":
+                        condition_met = state == trigger_value
+                    elif operator == "not equals":
+                        condition_met = state != trigger_value
+                    # String greater/less than comparison not supported
+                    elif operator in ["greater than", "less than"]:
+                        condition_met = False
+                        _LOGGER.warning("String comparison with %s not supported for %s", operator, entity_id)
+            except (ValueError, TypeError) as e:
+                _LOGGER.error("Error comparing values for %s: %s", entity_id, e)
+                condition_met = False
+            
+            # If condition is not met, add to unmet list
+            if not condition_met:
+                unmet.append(name)
+        
+        # Update state based on unmet conditions
+        if unmet:
+            self._state = ", ".join(unmet)
+            self._attr_icon = self._settings["icons"]["alert"]
+        else:
+            self._state = self._settings["text_all_clear"]
+            self._attr_icon = self._settings["icons"]["clear"]
+        
+        self._unmet = unmet
+        self.async_write_ha_state()
+
+    async def async_update_settings(self, settings: dict[str, Any], conditions: list[dict]) -> None:
+        """Update settings and conditions dynamically."""
+        _LOGGER.debug("Updating settings: %s", settings)
+        self._settings = settings
+        
+        # Validate conditions
+        self._conditions = [
+            condition for condition in conditions if self._validate_condition(condition)
+        ]
+        for condition in conditions:
+            if not self._validate_condition(condition):
+                _LOGGER.warning("Skipping malformed condition: %s", condition)
+        
+        # Update state based on new settings
+        await self._async_update_state()
+        _LOGGER.debug("Settings updated, new state: %s", self._state)
