@@ -4,5 +4,5 @@
   "zip_release": false,
   "filename": "custom_components/combined_notifications/manifest.json",
   "render_readme": true
-  "category": "integration"
+  "category": integration
 }
