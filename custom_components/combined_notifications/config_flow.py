@@ -3,8 +3,8 @@ import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.helpers import selector
 from .const import DOMAIN, COLORS, OPERATORS, OPERATOR_MAP, COLOR_MAP
+from homeassistant.helpers import selector
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,14 +74,14 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
             vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
             vol.Required("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
-            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
-            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "")): vol.In(COLORS),
+            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
             vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
             # Alert settings
             vol.Optional("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
             vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
-            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
-            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
+            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
             vol.Optional("hide_title_alert", default=self._data.get("hide_title_alert", False)): bool,
         })
 
@@ -206,16 +206,16 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                             "alert": self._data.get("icon_alert", "mdi:alert-circle"),
                         },
                         "colors": {
-                            "clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Green"), "rgb(19, 161, 14)"),
-                            "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "rgb(190, 11, 11)"),
+                            "clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Green"), "Green"),
+                            "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "Red"),
                         },
                         "text_colors": {
-                            "clear": COLOR_MAP.get(self._data.get("text_color_all_clear", "Use YOUR Current Theme Color"), ""),
-                            "alert": COLOR_MAP.get(self._data.get("text_color_alert", "Use YOUR Current Theme Color"), ""),
+                            "clear": COLOR_MAP.get(self._data.get("text_color_all_clear", ""), ""),
+                            "alert": COLOR_MAP.get(self._data.get("text_color_alert", ""), ""),
                         },
                         "icon_colors": {
-                            "clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", "Use YOUR Current Theme Color"), ""),
-                            "alert": COLOR_MAP.get(self._data.get("icon_color_alert", "Use YOUR Current Theme Color"), ""),
+                            "clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", ""), ""),
+                            "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), ""),
                         },
                         "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
                         "hide_title_alert": str(self._data.get("hide_title_alert", False)).lower() == "true",
@@ -277,7 +277,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             try:
                 self._data.update({
-                    "text_all_clear": user_input.get("text_all_clear")
+                    "text_all_clear": user_input.get("text_all_clear"),
+                    "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", ""))
                 })
                 _LOGGER.debug("Basic settings updated: %s", user_input)
                 return await self.async_step_menu()
@@ -287,6 +288,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 
         schema = vol.Schema({
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+            vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str,
         })
 
         return self.async_show_form(
@@ -321,14 +323,14 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
             vol.Optional("icon_all_clear", default=self._data.get("icon_all_clear", "mdi:hand-okay")): str,
             vol.Required("background_color_all_clear", default=self._data.get("background_color_all_clear", "Green")): vol.In(COLORS),
-            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
-            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("text_color_all_clear", default=self._data.get("text_color_all_clear", "")): vol.In(COLORS),
+            vol.Optional("icon_color_all_clear", default=self._data.get("icon_color_all_clear", "")): vol.In(COLORS),
             vol.Optional("hide_title", default=self._data.get("hide_title", False)): bool,
             # Alert settings
             vol.Optional("icon_alert", default=self._data.get("icon_alert", "mdi:alert-circle")): str,
             vol.Required("background_color_alert", default=self._data.get("background_color_alert", "Red")): vol.In(COLORS),
-            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
-            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "Use YOUR Current Theme Color")): vol.In(COLORS),
+            vol.Optional("text_color_alert", default=self._data.get("text_color_alert", "")): vol.In(COLORS),
+            vol.Optional("icon_color_alert", default=self._data.get("icon_color_alert", "")): vol.In(COLORS),
             vol.Optional("hide_title_alert", default=self._data.get("hide_title_alert", False)): bool,
         })
 
