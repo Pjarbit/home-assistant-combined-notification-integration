@@ -8,5 +8,6 @@
   "dependencies": [],
   "codeowners": ["@Pjarbit"],
   "requirements": [],
-  "iot_class": "local_polling"
+  "iot_class": "local_polling",
+  "icon": "icon.png"
 }
