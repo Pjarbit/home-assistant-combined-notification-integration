@@ -5,7 +5,7 @@ NOTIFICATION_TEMPLATES_PATH = "notification_templates"
 
 # Color options for the notification card
 COLORS = [
-    "Use YOUR Current Theme Color", "Red", "Green", "Blue", "Yellow", "Orange",
+    "Use YOUR Current Theme Color", "Red", "Green", "Bright Green", "Blue", "Yellow", "Orange",
     "Purple", "Gray", "White", "Black", "Teal", "Transparent Background"
 ]
 
@@ -28,7 +28,8 @@ OPERATOR_MAP = {
 # Color mapping for RGB values (or CSS color keywords)
 COLOR_MAP = {
     "Red": "rgb(190, 11, 11)",
-    "Green": "rgb(19, 161, 14)",
+    "Green": "rgb(38, 141, 53)",  # Updated to darker green
+    "Bright Green": "rgb(47, 207, 118)",  # Updated to brighter green
     "Blue": "rgb(2, 136, 209)",
     "Yellow": "rgb(255, 215, 0)",
     "Orange": "rgb(255, 140, 0)",
@@ -38,5 +39,5 @@ COLOR_MAP = {
     "Black": "rgb(0, 0, 0)",
     "Teal": "rgb(0, 128, 128)",
     "Transparent Background": "transparent",
-    "Use YOUR Current Theme Color": "var(--primary-background-color)"  # CSS variable for theme background
+    "Use YOUR Current Theme Color": "var(--primary-background-color)"
 }
