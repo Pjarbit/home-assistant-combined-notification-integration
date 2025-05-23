@@ -27,7 +27,8 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            # --- Removed friendly_sensor_name logic here ---
+            # Friendly sensor name box removed, default to instance name
+            user_input["friendly_sensor_name"] = user_input["name"] # <--- MODIFIED LINE
             self._data.update(user_input)
             name = user_input.get("name")
             if any(entry.data.get("name") == name for entry in self._async_current_entries()):
@@ -36,7 +37,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_appearance()
         schema = vol.Schema({
             vol.Required("name"): str,
-            # --- Removed: vol.Required("friendly_sensor_name", default=""): str, ---
+            # vol.Required("friendly_sensor_name", default=""): str, # <--- REMOVED LINE
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
@@ -163,7 +164,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
                     settings = {
                         "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
-                        # --- Removed: "friendly_sensor_name": self._data.get("friendly_sensor_name", ""), ---
+                        "friendly_sensor_name": self._data.get("friendly_sensor_name", ""),
                         "icons": {"clear": self._data.get("icon_all_clear", "mdi:hand-okay"), "alert": self._data.get("icon_alert", "mdi:alert-circle")},
                         "colors": {"clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Bright Green"), "Bright Green"), "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "Red")},
                         "text_colors": {"clear": COLOR_MAP.get(self._data.get("text_color_all_clear", ""), ""), "alert": COLOR_MAP.get(self._data.get("text_color_alert", ""), "")},
@@ -199,7 +200,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             try:
                 self._data.update({
                     "text_all_clear": user_input.get("text_all_clear"),
-                    # --- Removed: "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", "")) ---
+                    # "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", "")), # <--- REMOVED LINE
                 })
                 _LOGGER.debug("Basic settings updated: %s", user_input)
                 return await self.async_step_menu()
@@ -208,7 +209,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "unknown"
         schema = vol.Schema({
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
-            # --- Removed: vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str, ---
+            # vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str, # <--- REMOVED LINE
         })
         return self.async_show_form(step_id="basic_settings", data_schema=schema, errors=errors, description_placeholders={"name": self._data.get("name", "Unknown")})
 
@@ -333,7 +334,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         # Reconstruct condition_choices for display if needed elsewhere, but mainly for the list schema
         conditions_text = "\n".join(
             f"- {condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
-            for condition in self._conditions
+            for i, condition in enumerate(self._conditions)
         )
 
         return self.async_show_form(
