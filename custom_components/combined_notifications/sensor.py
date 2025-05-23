@@ -213,6 +213,12 @@ class CombinedNotificationSensor(Entity):
         try:
             _LOGGER.debug("Received settings update: %s, conditions: %s", new_settings, new_conditions)
             self._settings = new_settings
+            
+            # Update friendly name if provided
+            if "friendly_sensor_name" in new_settings and new_settings["friendly_sensor_name"]:
+                self._attr_name = new_settings["friendly_sensor_name"]
+                _LOGGER.debug("Updated sensor friendly name to: %s", new_settings["friendly_sensor_name"])
+            
             self._state = new_settings["text_all_clear"][:255]
             self._attr_icon = new_settings["icons"]["clear"]
             await self.async_update_conditions(new_conditions)
