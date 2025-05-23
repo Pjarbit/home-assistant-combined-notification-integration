@@ -20,7 +20,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the combined notification sensor from a config entry."""
     name = config_entry.data["name"]
-    # Removed friendly_sensor_name as it's no longer configured via config_flow
+    friendly_sensor_name = config_entry.data.get("friendly_sensor_name", name)  # Restored
     conditions = config_entry.data.get("conditions", [])
     settings = {
         "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
@@ -44,23 +44,22 @@ async def async_setup_entry(
         "hide_title_alert": str(config_entry.data.get("hide_title_alert", "False")).lower() == "true",
     }
 
-    # Pass 'name' directly for the sensor's name
-    sensor = CombinedNotificationSensor(hass, name, conditions, settings, config_entry.entry_id)
+    sensor = CombinedNotificationSensor(hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id) # Restored
     async_add_entities([sensor], update_before_add=True)
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
 
-    def __init__(self, hass: HomeAssistant, name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
+    def __init__(self, hass: HomeAssistant, name: str, friendly_sensor_name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str): # Restored
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
+        self._friendly_sensor_name = friendly_sensor_name # Restored
         self._entry_id = entry_id
         
-        # Use the name provided from config_entry.data directly for _attr_name
-        # as friendly_sensor_name is no longer provided via config flow
-        self._attr_name = name 
+        # Use friendly name if provided, otherwise fall back to name - Restored
+        self._attr_name = friendly_sensor_name if friendly_sensor_name and friendly_sensor_name.strip() else name
         
         self._conditions = [
             condition for condition in conditions if self._validate_condition(condition)
@@ -87,7 +86,6 @@ class CombinedNotificationSensor(Entity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        # This property will now consistently return the instance name
         return self._name
 
     @property
@@ -175,8 +173,7 @@ class CombinedNotificationSensor(Entity):
             # Skip disabled conditions
             if condition.get("disabled", False):
                 continue
-            
-            # Remaining code continues here (from the original snippet)
+
             entity_id = condition.get("entity_id")
             operator = condition.get("operator")
             trigger_value = condition.get("trigger_value")
