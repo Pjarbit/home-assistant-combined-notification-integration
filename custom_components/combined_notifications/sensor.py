@@ -73,7 +73,7 @@ class CombinedNotificationSensor(Entity):
         self._unsubscribe_callbacks = []
         self._debounced_update_task = None
 
-        self._attr_has_entity_name = True
+        self._attr_has_entity_name = False
         self._attr_should_poll = False
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_icon = settings["icons"]["clear"]
