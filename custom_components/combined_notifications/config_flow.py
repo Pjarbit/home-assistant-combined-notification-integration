@@ -27,8 +27,9 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            # Friendly sensor name box removed, default to instance name
-            user_input["friendly_sensor_name"] = user_input["name"] # <--- MODIFIED LINE
+            # Default friendly_sensor_name to name if empty
+            if not user_input["friendly_sensor_name"].strip():
+                user_input["friendly_sensor_name"] = user_input["name"]
             self._data.update(user_input)
             name = user_input.get("name")
             if any(entry.data.get("name") == name for entry in self._async_current_entries()):
@@ -37,7 +38,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_appearance()
         schema = vol.Schema({
             vol.Required("name"): str,
-            # vol.Required("friendly_sensor_name", default=""): str, # <--- REMOVED LINE
+            vol.Required("friendly_sensor_name", default=""): str,
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
@@ -171,9 +172,9 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                         "icon_colors": {"clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", ""), ""), "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), "")},
                         "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
                         "hide_title_alert": str(self._data.get("hide_title_alert", False)).lower() == "true",
-                    }
+}
                     if sensor and hasattr(sensor, "async_update_settings"):
-                        await sensor.async_update_settings(settings, self._conditions)
+                        await sensor.async_update_settings(settings, self._conditions)  # ADDED AWAIT HERE
                     self.hass.config_entries.async_update_entry(self.config_entry, data={**self._data, "conditions": self._conditions})
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                     return self.async_create_entry(title="", data={})
@@ -200,7 +201,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             try:
                 self._data.update({
                     "text_all_clear": user_input.get("text_all_clear"),
-                    # "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", "")), # <--- REMOVED LINE
+                    "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", ""))  # ADDED THIS
                 })
                 _LOGGER.debug("Basic settings updated: %s", user_input)
                 return await self.async_step_menu()
@@ -209,7 +210,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "unknown"
         schema = vol.Schema({
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
-            # vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str, # <--- REMOVED LINE
+            vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str,  # ADDED THIS
         })
         return self.async_show_form(step_id="basic_settings", data_schema=schema, errors=errors, description_placeholders={"name": self._data.get("name", "Unknown")})
 
@@ -331,10 +332,13 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 description_placeholders={"conditions": "No conditions have been added yet."}
             )
 
-        # Reconstruct condition_choices for display if needed elsewhere, but mainly for the list schema
+        condition_choices = {
+            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            for i, condition in enumerate(self._conditions)
+        }
         conditions_text = "\n".join(
             f"- {condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
-            for i, condition in enumerate(self._conditions)
+            for condition in self._conditions
         )
 
         return self.async_show_form(
