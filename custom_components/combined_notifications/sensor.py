@@ -217,6 +217,7 @@ class CombinedNotificationSensor(Entity):
             # Update friendly name if provided
             if "friendly_sensor_name" in new_settings and new_settings["friendly_sensor_name"]:
                 self._attr_name = new_settings["friendly_sensor_name"]
+                self._friendly_sensor_name = new_settings["friendly_sensor_name"]
                 _LOGGER.debug("Updated sensor friendly name to: %s", new_settings["friendly_sensor_name"])
             
             self._state = new_settings["text_all_clear"][:255]
@@ -224,6 +225,10 @@ class CombinedNotificationSensor(Entity):
             await self.async_update_conditions(new_conditions)
             await self.async_update()
             self.async_schedule_update_ha_state(True)
+            
+            # Force entity registry update for name change
+            self.async_write_ha_state()
+            
             _LOGGER.debug("Settings and conditions updated successfully")
         except Exception as e:
             _LOGGER.error("Error updating settings: %s", e)
