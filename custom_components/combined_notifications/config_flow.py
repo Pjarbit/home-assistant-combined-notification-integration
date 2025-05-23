@@ -165,13 +165,14 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
                     settings = {
                         "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
+                        "friendly_sensor_name": self._data.get("friendly_sensor_name", ""),
                         "icons": {"clear": self._data.get("icon_all_clear", "mdi:hand-okay"), "alert": self._data.get("icon_alert", "mdi:alert-circle")},
                         "colors": {"clear": COLOR_MAP.get(self._data.get("background_color_all_clear", "Bright Green"), "Bright Green"), "alert": COLOR_MAP.get(self._data.get("background_color_alert", "Red"), "Red")},
                         "text_colors": {"clear": COLOR_MAP.get(self._data.get("text_color_all_clear", ""), ""), "alert": COLOR_MAP.get(self._data.get("text_color_alert", ""), "")},
                         "icon_colors": {"clear": COLOR_MAP.get(self._data.get("icon_color_all_clear", ""), ""), "alert": COLOR_MAP.get(self._data.get("icon_color_alert", ""), "")},
                         "hide_title": str(self._data.get("hide_title", False)).lower() == "true",
                         "hide_title_alert": str(self._data.get("hide_title_alert", False)).lower() == "true",
-                    }
+}
                     if sensor and hasattr(sensor, "async_update_settings"):
                         await sensor.async_update_settings(settings, self._conditions)  # ADDED AWAIT HERE
                     self.hass.config_entries.async_update_entry(self.config_entry, data={**self._data, "conditions": self._conditions})
