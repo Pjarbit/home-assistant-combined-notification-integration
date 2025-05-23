@@ -21,6 +21,10 @@ async def async_setup_entry(
     """Set up the combined notification sensor from a config entry."""
     name = config_entry.data["name"]
     friendly_sensor_name = config_entry.data.get("friendly_sensor_name", name)  # Default to name if not present
+    
+    _LOGGER.debug("async_setup_entry: name from config_entry.data: %s", name)
+    _LOGGER.debug("async_setup_entry: friendly_sensor_name from config_entry.data: %s", friendly_sensor_name)
+
     conditions = config_entry.data.get("conditions", [])
     settings = {
         "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
@@ -60,6 +64,9 @@ class CombinedNotificationSensor(Entity):
         
         # Use friendly name if provided, otherwise fall back to name
         self._attr_name = friendly_sensor_name if friendly_sensor_name and friendly_sensor_name.strip() else name
+        
+        _LOGGER.debug("CombinedNotificationSensor __init__: Input friendly_sensor_name: %s", friendly_sensor_name)
+        _LOGGER.debug("CombinedNotificationSensor __init__: Resulting self._attr_name: %s", self._attr_name)
         
         self._conditions = [
             condition for condition in conditions if self._validate_condition(condition)
@@ -219,6 +226,10 @@ class CombinedNotificationSensor(Entity):
                 self._attr_name = new_settings["friendly_sensor_name"]
                 self._friendly_sensor_name = new_settings["friendly_sensor_name"]
                 _LOGGER.debug("Updated sensor friendly name to: %s", new_settings["friendly_sensor_name"])
+            else: # Added this else block
+                self._attr_name = self._name # Revert to original name if friendly_sensor_name is cleared
+                self._friendly_sensor_name = self._name
+                _LOGGER.debug("Reverted sensor friendly name to original: %s", self._name)
             
             self._state = new_settings["text_all_clear"][:255]
             self._attr_icon = new_settings["icons"]["clear"]
