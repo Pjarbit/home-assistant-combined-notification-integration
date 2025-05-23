@@ -27,6 +27,9 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
+            # Default friendly_sensor_name to name if empty
+            if not user_input["friendly_sensor_name"].strip():
+                user_input["friendly_sensor_name"] = user_input["name"]
             self._data.update(user_input)
             name = user_input.get("name")
             if any(entry.data.get("name") == name for entry in self._async_current_entries()):
@@ -35,6 +38,7 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_appearance()
         schema = vol.Schema({
             vol.Required("name"): str,
+            vol.Required("friendly_sensor_name", default=""): str,
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
@@ -80,7 +84,8 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "entity_id": user_input["entity_id"],
                     "operator": operator,
                     "trigger_value": user_input["trigger_value"],
-                    "name": user_input.get("name", user_input["entity_id"])
+                    "name": user_input.get("name", user_input["entity_id"]),
+                    "disabled": False  # Default to enabled
                 }
                 self._conditions.append(condition)
                 return await self.async_step_confirm_conditions()
@@ -124,6 +129,11 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         """Initialize options flow."""
         self._data = dict(config_entry.data)
         self._conditions = list(config_entry.data.get("conditions", []))
+        self.config_entry = config_entry
+        # Ensure existing conditions have the disabled field
+        for condition in self._conditions:
+            if "disabled" not in condition:
+                condition["disabled"] = False
 
     async def async_step_init(self, user_input=None):
         """Initial step for options flow."""
@@ -163,7 +173,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                         "hide_title_alert": str(self._data.get("hide_title_alert", False)).lower() == "true",
                     }
                     if sensor and hasattr(sensor, "async_update_settings"):
-                        sensor.async_update_settings(settings, self._conditions)
+                        await sensor.async_update_settings(settings, self._conditions)  # ADDED AWAIT HERE
                     self.hass.config_entries.async_update_entry(self.config_entry, data={**self._data, "conditions": self._conditions})
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                     return self.async_create_entry(title="", data={})
@@ -188,7 +198,10 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             try:
-                self._data.update({"text_all_clear": user_input.get("text_all_clear")})
+                self._data.update({
+                    "text_all_clear": user_input.get("text_all_clear"),
+                    "friendly_sensor_name": user_input.get("friendly_sensor_name", self._data.get("name", ""))  # ADDED THIS
+                })
                 _LOGGER.debug("Basic settings updated: %s", user_input)
                 return await self.async_step_menu()
             except Exception as e:
@@ -196,6 +209,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "unknown"
         schema = vol.Schema({
             vol.Required("text_all_clear", default=self._data.get("text_all_clear", "ALL CLEAR")): str,
+            vol.Required("friendly_sensor_name", default=self._data.get("friendly_sensor_name", self._data.get("name", ""))): str,  # ADDED THIS
         })
         return self.async_show_form(step_id="basic_settings", data_schema=schema, errors=errors, description_placeholders={"name": self._data.get("name", "Unknown")})
 
@@ -259,7 +273,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         })
 
     async def async_step_list_conditions(self, user_input=None):
-        """List all conditions and allow selecting one to edit or delete."""
+        """List all conditions and allow selecting one to edit, delete, or toggle enable/disable."""
         if user_input is not None:
             try:
                 if user_input.get("condition_action") == "back":
@@ -269,10 +283,32 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 action = user_input.get("condition_action")
                 _LOGGER.debug("Condition action: %s, index: %s", action, selected_index)
 
-                if action == "edit" and selected_index is not None:
-                    return await self.async_step_edit_condition({"index": selected_index})
-                elif action == "delete" and selected_index is not None:
-                    self._conditions.pop(int(selected_index))
+                if selected_index is None:
+                    return self.async_show_form(
+                        step_id="list_conditions",
+                        data_schema=self._get_list_conditions_schema(),
+                        description_placeholders={"conditions": "Please select a condition."},
+                        errors={"base": "no_selection"}
+                    )
+
+                selected_index = int(selected_index)
+                if not (0 <= selected_index < len(self._conditions)):
+                    return self.async_show_form(
+                        step_id="list_conditions",
+                        data_schema=self._get_list_conditions_schema(),
+                        description_placeholders={"conditions": "Invalid selection."},
+                        errors={"base": "invalid_index"}
+                    )
+
+                if action == "edit":
+                    return await self.async_step_edit_condition({"index": str(selected_index)})
+                elif action == "delete":
+                    self._conditions.pop(selected_index)
+                    return await self.async_step_list_conditions()
+                elif action == "toggle":
+                    # Toggle the disabled state
+                    self._conditions[selected_index]["disabled"] = not self._conditions[selected_index].get("disabled", False)
+                    _LOGGER.debug("Toggled condition %s to disabled=%s", selected_index, self._conditions[selected_index]["disabled"])
                     return await self.async_step_list_conditions()
             except Exception as e:
                 _LOGGER.error("Error processing list conditions: %s", e)
@@ -295,8 +331,14 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 description_placeholders={"conditions": "No conditions have been added yet."}
             )
 
-        condition_choices = {str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')})" for i, condition in enumerate(self._conditions)}
-        conditions_text = "\n".join(f"- {condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')})" for condition in self._conditions)
+        condition_choices = {
+            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            for i, condition in enumerate(self._conditions)
+        }
+        conditions_text = "\n".join(
+            f"- {condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            for condition in self._conditions
+        )
 
         return self.async_show_form(
             step_id="list_conditions",
@@ -306,12 +348,16 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 
     def _get_list_conditions_schema(self):
         """Return the list conditions schema."""
-        condition_choices = {str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')})" for i, condition in enumerate(self._conditions)}
+        condition_choices = {
+            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            for i, condition in enumerate(self._conditions)
+        }
         return vol.Schema({
             vol.Optional("condition_index"): vol.In(condition_choices),
             vol.Required("condition_action", default="back"): vol.In({
                 "edit": "Edit Selected Condition",
                 "delete": "Delete Selected Condition",
+                "toggle": "Toggle Enable/Disable",
                 "back": "Back to Conditions Menu"
             })
         })
@@ -326,7 +372,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     "entity_id": user_input["entity_id"],
                     "operator": operator,
                     "trigger_value": user_input["trigger_value"],
-                    "name": user_input.get("name", user_input["entity_id"])
+                    "name": user_input.get("name", user_input["entity_id"]),
+                    "disabled": False
                 }
                 self._conditions.append(condition)
                 _LOGGER.debug("Condition added: %s", condition)
@@ -369,7 +416,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     "entity_id": user_input["entity_id"],
                     "operator": operator,
                     "trigger_value": user_input["trigger_value"],
-                    "name": user_input.get("name", user_input["entity_id"])
+                    "name": user_input.get("name", user_input["entity_id"]),
+                    "disabled": condition.get("disabled", False)  # Preserve the disabled state
                 }
                 _LOGGER.debug("Condition edited: %s", self._conditions[index])
                 return await self.async_step_menu()
