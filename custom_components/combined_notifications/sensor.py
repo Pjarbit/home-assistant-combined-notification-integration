@@ -20,6 +20,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the combined notification sensor from a config entry."""
     name = config_entry.data["name"]
+    friendly_sensor_name = config_entry.data.get("friendly_sensor_name", name)  # Default to name if not present
     conditions = config_entry.data.get("conditions", [])
     settings = {
         "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
@@ -43,17 +44,18 @@ async def async_setup_entry(
         "hide_title_alert": str(config_entry.data.get("hide_title_alert", "False")).lower() == "true",
     }
 
-    sensor = CombinedNotificationSensor(hass, name, conditions, settings, config_entry.entry_id)
+    sensor = CombinedNotificationSensor(hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id)
     async_add_entities([sensor], update_before_add=True)
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
 
-    def __init__(self, hass: HomeAssistant, name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
+    def __init__(self, hass: HomeAssistant, name: str, friendly_sensor_name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
+        self._friendly_sensor_name = friendly_sensor_name
         self._entry_id = entry_id
         self._conditions = [
             condition for condition in conditions if self._validate_condition(condition)
@@ -81,6 +83,11 @@ class CombinedNotificationSensor(Entity):
     def name(self) -> str:
         """Return the name of the sensor."""
         return self._name
+
+    @property
+    def friendly_name(self) -> str:
+        """Return the friendly name of the sensor."""
+        return self._friendly_sensor_name
 
     @property
     def unique_id(self) -> str:
@@ -116,6 +123,16 @@ class CombinedNotificationSensor(Entity):
             "is_clear": not bool(self._unmet),
             "hide_title": self._settings["hide_title"],
             "hide_title_alert": self._settings["hide_title_alert"],
+        }
+
+    @property
+    def device_info(self):
+        """Return device information for the sensor."""
+        return {
+            "identifiers": {(DOMAIN, self._entry_id)},
+            "name": self._name,
+            "manufacturer": "Combined Notifications",
+            "model": "Virtual Sensor",
         }
 
     @callback
@@ -155,6 +172,10 @@ class CombinedNotificationSensor(Entity):
         """Update the sensor state by evaluating all conditions."""
         self._unmet = []
         for condition in self._conditions:
+            # Skip disabled conditions
+            if condition.get("disabled", False):
+                continue
+
             entity_id = condition.get("entity_id")
             operator = condition.get("operator", "==")
             expected = condition.get("trigger_value")
