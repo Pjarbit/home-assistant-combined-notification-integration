@@ -57,6 +57,10 @@ class CombinedNotificationSensor(Entity):
         self._name = name
         self._friendly_sensor_name = friendly_sensor_name
         self._entry_id = entry_id
+        
+        # Use friendly name if provided, otherwise fall back to name
+        self._attr_name = friendly_sensor_name if friendly_sensor_name and friendly_sensor_name.strip() else name
+        
         self._conditions = [
             condition for condition in conditions if self._validate_condition(condition)
         ]
@@ -83,11 +87,6 @@ class CombinedNotificationSensor(Entity):
     def name(self) -> str:
         """Return the name of the sensor."""
         return self._name
-
-    @property
-    def friendly_name(self) -> str:
-        """Return the friendly name of the sensor."""
-        return self._friendly_sensor_name
 
     @property
     def unique_id(self) -> str:
