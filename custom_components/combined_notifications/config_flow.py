@@ -129,7 +129,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         """Initialize options flow."""
         self._data = dict(config_entry.data)
         self._conditions = list(config_entry.data.get("conditions", []))
-        self.config_entry = config_entry
+        self._config_entry = config_entry
         # Ensure existing conditions have the disabled field
         for condition in self._conditions:
             if "disabled" not in condition:
@@ -159,10 +159,10 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 elif menu_option == "manage_conditions":
                     return await self.async_step_manage_conditions()
                 elif menu_option == "save_changes":
-                    if not self.config_entry:
+                    if not self._config_entry:
                         _LOGGER.error("Config entry is None, cannot save options")
                         return self.async_show_form(step_id="menu", data_schema=self._get_menu_schema(), errors={"base": "no_config_entry"})
-                    sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+                    sensor = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
                     settings = {
                         "text_all_clear": self._data.get("text_all_clear", "ALL CLEAR"),
                         "friendly_sensor_name": self._data.get("friendly_sensor_name", ""),
@@ -175,8 +175,8 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 }
                     if sensor and hasattr(sensor, "async_update_settings"):
                         await sensor.async_update_settings(settings, self._conditions)  # ADDED AWAIT HERE
-                    self.hass.config_entries.async_update_entry(self.config_entry, data={**self._data, "conditions": self._conditions})
-                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    self.hass.config_entries.async_update_entry(self._config_entry, data={**self._data, "conditions": self._conditions})
+                    await self.hass.config_entries.async_reload(self._config_entry.entry_id)
                     return self.async_create_entry(title="", data={})
             except Exception as e:
                 _LOGGER.error("Unexpected error saving options: %s", e)
@@ -333,11 +333,18 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             )
 
         condition_choices = {
-            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} "
+                    f"({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} "
+                    f"{condition.get('trigger_value', '')}) - "
+                    f"{'🟢 Enabled' if not condition.get('disabled', False) else '🔴 Disabled'}"
             for i, condition in enumerate(self._conditions)
         }
+
         conditions_text = "\n".join(
-            f"- {condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            f"- {condition.get('name', condition.get('entity_id', 'unknown'))} "
+            f"({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} "
+            f"{condition.get('trigger_value', '')}) - "
+            f"{'🟢 Enabled' if not condition.get('disabled', False) else '🔴 Disabled'}"
             for condition in self._conditions
         )
 
@@ -350,7 +357,10 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
     def _get_list_conditions_schema(self):
         """Return the list conditions schema."""
         condition_choices = {
-            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} ({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} {condition.get('trigger_value', '')}) - {'Disabled' if condition.get('disabled', False) else 'Enabled'}"
+            str(i): f"{condition.get('name', condition.get('entity_id', 'unknown'))} "
+                    f"({condition.get('entity_id', 'unknown')} {condition.get('operator', '==')} "
+                    f"{condition.get('trigger_value', '')}) - "
+                    f"{'🟢 Enabled' if not condition.get('disabled', False) else '🔴 Disabled'}"
             for i, condition in enumerate(self._conditions)
         }
         return vol.Schema({
