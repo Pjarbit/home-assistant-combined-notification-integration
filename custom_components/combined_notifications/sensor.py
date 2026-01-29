@@ -45,7 +45,8 @@ async def async_setup_entry(
     }
 
     sensor = CombinedNotificationSensor(hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id)
-    async_add_entities([sensor], update_before_add=True)
+    count_sensor = CombinedNotificationCountSensor(hass, name, sensor, config_entry.entry_id)
+    async_add_entities([sensor, count_sensor], update_before_add=True)
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
 
 class CombinedNotificationSensor(Entity):
@@ -193,6 +194,10 @@ class CombinedNotificationSensor(Entity):
         if len(state) > 255:
             _LOGGER.warning("State truncated to 255 characters, original length: %s", len(state))
         self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
+        
+        # Update the count sensor if it exists
+        if hasattr(self, '_count_sensor'):
+            self._count_sensor.async_schedule_update_ha_state()
 
     async def async_update_conditions(self, new_conditions: list[dict]) -> None:
         """Update sensor conditions dynamically."""
@@ -258,3 +263,32 @@ class CombinedNotificationSensor(Entity):
             )
             return False
         return False
+
+
+class CombinedNotificationCountSensor(Entity):
+    """Sensor that shows count of unmet conditions."""
+
+    def __init__(self, hass: HomeAssistant, name: str, parent_sensor: CombinedNotificationSensor, entry_id: str):
+        """Initialize the count sensor."""
+        self._hass = hass
+        self._parent = parent_sensor
+        self._attr_name = f"{name} Fault Count"
+        self._attr_unique_id = f"combined_notifications_{entry_id}_count"
+        self._attr_has_entity_name = False
+        self._attr_should_poll = False
+        self._attr_icon = "mdi:counter"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def state(self) -> int:
+        """Return the count of unmet conditions."""
+        return len(self._parent._unmet)
+
+    @property
+    def device_info(self):
+        """Return device information to group with parent sensor."""
+        return self._parent.device_info
+
+    async def async_added_to_hass(self) -> None:
+        """Register this sensor with the parent."""
+        self._parent._count_sensor = self
