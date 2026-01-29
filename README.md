@@ -13,10 +13,9 @@ The **Combined Notifications Integration** for Home Assistant allows you to moni
 1. Open **HACS** in Home Assistant
 2. Click the three-dot menu (top right) → **Custom Repositories**
 3. Add this repository:
-
-   ```
+```
    https://github.com/Pjarbit/home-assistant-combined-notification-integration
-   ```
+```
 4. Set category to: **Integration**
 5. Click **Add**
 6. Search for **Combined Notifications Integration** in HACS Integrations
@@ -79,7 +78,6 @@ The integration creates a sensor (e.g., `sensor.home_status`) that reports:
 It also exposes additional styling data for use in frontend cards.
 
 ### Example: All Clear
-
 ```yaml
 state: "ALL CLEAR"
 attributes:
@@ -90,7 +88,6 @@ attributes:
 ```
 
 ### Example: Alert
-
 ```yaml
 state: "Garage Open, Door Unlocked"
 attributes:
@@ -98,6 +95,69 @@ attributes:
   color: red
   text_color: black
   icon_color: yellow
+```
+
+---
+
+## 💡 NEW in Version 3.6.0 - Fault Count Sensor
+
+Starting in version 3.6.0, the integration **automatically creates a companion count sensor** alongside each Combined Notifications sensor.
+
+### Automatic Count Sensor
+
+For each sensor you create (e.g., `sensor.office_lights`), a corresponding fault count sensor is automatically generated (e.g., `sensor.office_lights_fault_count`) that displays the numeric count of unmet conditions.
+
+**Key Benefits:**
+- ✅ Simple numeric display (0, 1, 2, etc.)
+- ✅ Perfect for badges on light/entity cards
+- ✅ No need to parse comma-separated lists
+- ✅ Updates automatically with parent sensor
+- ✅ Grouped under same device
+
+### Example Use Case: Light Cards with Count Badges
+
+<img src="https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/light_card_examples.png" width="600">
+
+The count sensor is ideal for displaying the number of lights currently on using various card configurations:
+
+**Simple card with count badge:**
+```yaml
+type: custom:mushroom-light-card
+entity: light.office_lights_group
+name: Office Lights
+icon: mdi:lightbulb
+icon_color: yellow
+badge_icon: |
+  {% if states('sensor.office_lights_fault_count')|int > 0 %}
+  mdi:numeric-{{ states('sensor.office_lights_fault_count') }}
+  {% endif %}
+```
+
+**Card showing "All Off" when count is zero:**
+```yaml
+type: custom:mushroom-light-card
+entity: light.office_lights_group
+name: Office Lights
+secondary_info: |
+  {% if states('sensor.office_lights_fault_count')|int == 0 %}
+  All Off
+  {% endif %}
+icon: mdi:lightbulb
+```
+
+**Card with badge and list of active lights:**
+```yaml
+type: custom:mushroom-light-card
+entity: light.office_lights_group
+name: Office Lights
+secondary_info: |
+  {{ state_attr('sensor.office_lights', 'unmet_conditions')|join(', ') if state_attr('sensor.office_lights', 'unmet_conditions') }}
+icon: mdi:lightbulb
+icon_color: yellow
+badge_icon: |
+  {% if states('sensor.office_lights_fault_count')|int > 0 %}
+  mdi:numeric-{{ states('sensor.office_lights_fault_count') }}
+  {% endif %}
 ```
 
 ---
@@ -127,12 +187,18 @@ These attributes are configurable in the integration's UI and exposed in the sen
 | `icon_color_alert`       | Icon color in alert state                                 |
 | `hide_title_alert`       | If `true`, hides the title/header in alert state          |
 
-These values are stored in the sensor’s attributes and can be used in custom cards or templates via `state_attr()`.
+These values are stored in the sensor's attributes and can be used in custom cards or templates via `state_attr()`.
 
 ---
 
-## ✨ Version 3.0 Highlights
+## ✨ Version History
 
+### Version 3.6.0
+* **NEW:** Automatic fault count sensor for each notification sensor
+* Perfect for card badges showing numeric counts
+* Simplifies tracking multiple entity states
+
+### Version 3.0
 * Live UI editing (no restart required)
 * Restructured settings layout for clarity
 * New: optional hidden alert titles for minimal displays
