@@ -1,83 +1,168 @@
-# Combined Notifications Integration
+# Combined Notifications for Home Assistant — v5
 
-![Combined Notifications Demo](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notifications-card-new/main/media/demo.gif)
+![Combined Notifications](media/logo.png)
 
-The **Combined Notifications Integration** for Home Assistant allows you to monitor and group multiple entity conditions into a single backend sensor. This sensor can be used in Lovelace dashboards, automations, or paired with the [Combined Notifications Card](https://github.com/Pjarbit/home-assistant-combined-notifications-card-new) for visual display.
+[![Demo](media/demo.gif)](media/demo.gif)
+
+**Monitor and group multiple entity conditions — all on ONE CARD. No YAML editing required.**
+
+Hundreds of conditions can be monitored with no slowdown or lagging in your frontend dashboard.
+
+Combined Notifications monitors the entities you choose and alerts you when something needs attention — with a count of exactly how many are at fault.
+
+- 3 lights left on: **Bathroom Light, Kitchen Light, Garage Light** — count: 3
+- Door left unlocked: **Kitchen Doorwall Unlocked** — count: 1
+- Battery critical: **Back Door Sensor 12%** — count: 1
+
+No entity IDs. Just the **custom names you** gave your devices. All on **one card**.
+
+---
+
+## 📋 Table of Contents
+
+- [Features and What's New in Version 5](#-features-and-whats-new-in-version-5)
+- [What's New in Version 5](#-features-and-whats-new-in-version-5)
+- [Upgrading from v4](#-upgrading-from-v4-to-v5)
+- [Installation](#-installation)
+- [Setup](#️-setup)
+- [Configuration Panel](#️-configuration-panel)
+  - [General Tab](#general-tab)
+  - [Conditions Tab](#conditions-tab--overview)
+  - [Individual Conditions](#individual-conditions--expanded)
+  - [Smart Groups](#smart-groups--expanded)
+- [Sensor Behavior](#-sensor-behavior)
+- [Alert Count](#-alert-count)
+- [Dashboard Cards](#️-dashboard-cards)
+  - [1. Basic — Hardcoded Colors](#1-basic--hardcoded-colors)
+  - [2. Basic — Integration Colors](#2-basic--integration-colors)
+  - [3. Advanced — Integration Colors with card-mod](#3-advanced--integration-colors-with-card-mod-recommended)
+- [Alert Ticker Card Pairing](#-alert-ticker-card-pairing)
+- [Combined Notifications vs Alert Ticker](#-combined-notifications-vs-alert-ticker)
+- [A Note from the Developer](#-a-note-from-the-developer)
+- [Removal](#-removal)
+- [License](#-license)
+
+---
+
+## ✅ Features and What's New in Version 5
+
+**Version 5 — Rebuilt from the ground up with all new features and functions**
+
+- Monitor unlimited entities with flexible alert conditions
+- Individual conditions — monitor specific entities one at a time
+- Smart Groups — bulk-add entities by keyword (e.g. all `door`, all `battery`, all `light`)
+- "AND" conditions — alert only when multiple requirements are met simultaneously
+- Pause conditions without deleting them
+- Automatic Alert COUNT sensor created alongside each notification sensor
+- Fully configured from the UI — no YAML required
+- Each sensor outputs a live list of active alert names, or blank when all clear
+- All new configuration UI — everything is visual, **no YAML required** 🆕
+- **Live Sensor State** shown right in the panel — no more hunting Developer Tools to figure out if your sensor says `open`, `Open`, `true`, or `1` 🆕
+- Smart Groups — type a keyword and bulk add every matching entity 🆕
+- "AND" conditions — is the car unlocked AND not in the garage? Is the back door open AND nobody is home? Now you can get an alert when both conditions meet your alert needs 🆕
+- Pause conditions without deleting them 🆕
+- **Alert Count** sensor created automatically alongside every sensor you make 🆕
+- Still ONE sensor, ONE card 🆕
+
+---
+
+## ⬆️ Upgrading from v4 to v5
+
+Moving from v4 to v5 should be seamless. Your existing sensors should carry over to the new version without any issues.
+
+Use caution before upgrading. Going back to v4 will not be easy. This upgrade is not downgradable without rebuilding all your sensors from scratch. Make a backup of your Home Assistant configuration before updating, just in case you want to go back.
 
 ---
 
 ## 📦 Installation
 
-### HACS (Recommended)
-
 1. Open **HACS** in Home Assistant
-2. Click the three-dot menu (top right) → **Custom Repositories**
-3. Add this repository:
-```
-   https://github.com/Pjarbit/home-assistant-combined-notification-integration
-```
-4. Set category to: **Integration**
-5. Click **Add**
-6. Search for **Combined Notifications Integration** in HACS Integrations
-7. Click **Install**
-8. Restart Home Assistant if prompted
-9. Go to **Settings → Devices & Services → Add Integration** and search for **Combined Notifications**
-
-### Manual Installation
-
-1. Download the latest release from [GitHub Releases](https://github.com/Pjarbit/home-assistant-combined-notification-integration/releases)
-2. Copy the `combined_notifications` folder into `config/custom_components/`
-3. Restart Home Assistant
-4. Add the integration via **Settings → Devices & Services**
+2. Go to **Integrations**
+3. Search for **Combined Notifications**
+4. Click **Download**
+5. Restart Home Assistant
+6. Go to **Settings → Devices & Services → Add Integration** and search for **Combined Notifications**
 
 ---
 
-## ⚙️ Configuration
-
-After installation:
+## ⚙️ Setup
 
 1. Go to **Settings → Devices & Services → Combined Notifications → Configure**
 2. Define your sensor name
-3. Add any number of conditions
+3. Add conditions
 4. Customize appearance and behavior
-5. Save and use the created sensor entity in dashboards or automations
+5. Save
 
-To modify sensor settings (delete an entity, add a new entity, change triggers, or update colors/icons), simply go to **Settings → Devices & Services → Combined Notifications → Configure**, select your sensor, and make changes directly from the built-in editor. No YAML or restart required.
+To modify settings later — add/delete entities, change triggers, update colors/icons — go to **Settings → Devices & Services → Combined Notifications → Configure**. No YAML or restart required.
+
+> Sensor names must use lowercase letters and underscores only — no spaces, no capitals.
+> Example: `sensor.YOUR_SENSOR_NAME`
+
+### Make Your Dashboard Card
+
+a. Go to your dashboard and add a manual card
+
+b. Copy the YAML of the card type you like from below
+
+c. Paste it into the manual card box
+
+d. Change the sensor name. That's it — Enjoy!
 
 ---
 
-## 🖼️ UI Screenshots
+## 🖥️ Configuration Panel
 
-### Main Menu
+### General Tab
 
-Navigate sections for conditions and visual settings:
+![General Tab](media/01_general_tab.png)
 
-![Main Menu](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/optionsmain.jpg)
+See the image above for all settings. If the panel does not display after selecting Configure, refresh your browser:
+**PC:** `Ctrl+Shift+R` · **Tablet:** Pull down from top · **Mac:** `Cmd+R` or `Cmd+Shift+R`
 
-### Appearance Settings
+If the window does not close after saving, close the browser window.
 
-Customize text, icons, and colors:
+---
 
-![Appearance Settings](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/Configurationattributes.jpg)
+### Conditions Tab — Overview
 
-### Conditions Editor
+The Conditions tab shows all monitored conditions at a glance. Badge colors indicate conditions, entities, paused, and alert counts — see image below.
 
-List, edit, or add monitored entity conditions:
+![Conditions Overview](media/02_conditions_overview.png)
 
-![Conditions Editor](https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/conditionmenu.jpg)
+---
+
+### Individual Conditions — Expanded
+
+Click any condition to expand it and configure the entity, alert rule, label, and optional AND condition.
+
+![Individual Condition Expanded](media/03_individual_condition.png)
+
+Look at the configuration panel — it shows the current state of your entity right there. That should give you a strong indication of exactly what value to use.
+
+Alert Value: `""` = blank. Other values do NOT use quotes.
+
+---
+
+### Smart Groups — Expanded
+
+Smart Groups bulk-add every entity matching a keyword. Run the configuration panel after adding new devices to include them in an existing group.
+
+![Smart Group Expanded](media/04_smart_group.png)
+
+Each entity in a Smart Group has a **Custom Label** field. Use this to give each entity a friendly name that displays on your card when it alerts. Instead of seeing `binary_sensor.garage_door_contact`, your card will show **Garage Door Open** — whatever you type in the label field.
+
+All entities in a Smart Group must share the same alert value (e.g. all `on/off` or all `open/closed`). Entities with different value types must be in separate groups.
+
+Use **Exclude All** as a starting point, then toggle on only the entities you want monitored.
 
 ---
 
 ## 🔍 Sensor Behavior
 
-The integration creates a sensor (e.g., `sensor.home_status`) that reports:
+The sensor reports a comma-separated list of unmet condition labels when alerting, or your all-clear text when everything is fine. It also exposes styling attributes that cards can read directly.
 
-* **"ALL CLEAR"** (or custom message) if all conditions are met
-* **Comma-separated list** of unmet condition labels otherwise
+#### All Clear
 
-It also exposes additional styling data for use in frontend cards.
-
-### Example: All Clear
 ```yaml
 state: "ALL CLEAR"
 attributes:
@@ -87,7 +172,8 @@ attributes:
   icon_color: gray
 ```
 
-### Example: Alert
+#### Alert
+
 ```yaml
 state: "Garage Open, Door Unlocked"
 attributes:
@@ -99,119 +185,325 @@ attributes:
 
 ---
 
-## 💡 NEW in Version 3.6.0 - Fault Count Sensor
+## 🔢 Alert Count
 
-Starting in version 3.6.0, the integration **automatically creates a companion count sensor** alongside each Combined Notifications sensor.
+For each sensor you create (e.g. `sensor.YOUR_SENSOR_NAME`), an **Alert Count** sensor is automatically generated (e.g. `sensor.YOUR_SENSOR_FAULT_COUNT`) that displays the number of active alerts as a simple number. Perfect for badges on light and entity cards.
 
-### Automatic Count Sensor
+#### Example Card with Count Badge
 
-For each sensor you create (e.g., `sensor.office_lights`), a corresponding fault count sensor is automatically generated (e.g., `sensor.office_lights_fault_count`) that displays the numeric count of unmet conditions.
-
-**Key Benefits:**
-- ✅ Simple numeric display (0, 1, 2, etc.)
-- ✅ Perfect for badges on light/entity cards
-- ✅ No need to parse comma-separated lists
-- ✅ Updates automatically with parent sensor
-- ✅ Grouped under same device
-
-### Example Use Case: Light Cards with Count Badges
-
-<img src="https://raw.githubusercontent.com/Pjarbit/home-assistant-combined-notification-integration/main/media/light_card_examples.png" width="600">
-
-The count sensor is ideal for displaying the number of lights currently on using various card configurations:
-
-**Simple card with count badge:**
 ```yaml
 type: custom:mushroom-light-card
-entity: light.office_lights_group
+entity: light.YOUR_LIGHT_GROUP
 name: Office Lights
 icon: mdi:lightbulb
 icon_color: yellow
 badge_icon: |
-  {% if states('sensor.office_lights_fault_count')|int > 0 %}
-  mdi:numeric-{{ states('sensor.office_lights_fault_count') }}
+  {% if states('sensor.YOUR_SENSOR_FAULT_COUNT')|int > 0 %}
+  mdi:numeric-{{ states('sensor.YOUR_SENSOR_FAULT_COUNT') }}
   {% endif %}
 ```
 
-**Card showing "All Off" when count is zero:**
+#### Example Card with All Off When Count is Zero
+
 ```yaml
 type: custom:mushroom-light-card
-entity: light.office_lights_group
+entity: light.YOUR_LIGHT_GROUP
 name: Office Lights
 secondary_info: |
-  {% if states('sensor.office_lights_fault_count')|int == 0 %}
+  {% if states('sensor.YOUR_SENSOR_FAULT_COUNT')|int == 0 %}
   All Off
   {% endif %}
 icon: mdi:lightbulb
 ```
 
-**Card with badge and list of active lights:**
+#### Example Card with Badge and List of Active Lights
+
 ```yaml
 type: custom:mushroom-light-card
-entity: light.office_lights_group
+entity: light.YOUR_LIGHT_GROUP
 name: Office Lights
 secondary_info: |
-  {{ state_attr('sensor.office_lights', 'unmet_conditions')|join(', ') if state_attr('sensor.office_lights', 'unmet_conditions') }}
+  {{ state_attr('sensor.YOUR_SENSOR_NAME', 'unmet_conditions')|join(', ') if state_attr('sensor.YOUR_SENSOR_NAME', 'unmet_conditions') }}
 icon: mdi:lightbulb
 icon_color: yellow
 badge_icon: |
-  {% if states('sensor.office_lights_fault_count')|int > 0 %}
-  mdi:numeric-{{ states('sensor.office_lights_fault_count') }}
+  {% if states('sensor.YOUR_SENSOR_FAULT_COUNT')|int > 0 %}
+  mdi:numeric-{{ states('sensor.YOUR_SENSOR_FAULT_COUNT') }}
   {% endif %}
 ```
 
 ---
 
-## 🔧 Sensor Appearance Attributes (Modifiable via YAML or UI)
+## 🖼️ Dashboard Cards
 
-These attributes are configurable in the integration's UI and exposed in the sensor entity for use in dashboards and frontend cards.
+There are other cards that are better (listed below) or you can simply use the Alert Ticker Cards if you like the styling.
 
-### ✅ All-Clear State Attributes
+Personally, I use the cards listed below. For my use, the alert ticker cards are too distracting and don't fit with the look of my dashboards. Styling is a personal decision. Pick what you like, the decision is yours.
 
-| Attribute Key                | Description                                                   |
-| ---------------------------- | ------------------------------------------------------------- |
-| `text_all_clear`             | Text shown when all conditions are met                        |
-| `icon_all_clear`             | Icon used when in all-clear state (`mdi:*`)                   |
-| `background_color_all_clear` | Background color when all is clear (e.g., `green`, `#00ff00`) |
-| `text_color_all_clear`       | Text color in all-clear state                                 |
-| `icon_color_all_clear`       | Icon color in all-clear state                                 |
-| `hide_title`                 | If `true`, hides the title/header in clear state              |
+To add any of these cards to your dashboard:
 
-### ⚠️ Alert State Attributes
-
-| Attribute Key            | Description                                               |
-| ------------------------ | --------------------------------------------------------- |
-| `icon_alert`             | Icon used when one or more conditions are unmet (`mdi:*`) |
-| `background_color_alert` | Background color in alert state                           |
-| `text_color_alert`       | Text color in alert state                                 |
-| `icon_color_alert`       | Icon color in alert state                                 |
-| `hide_title_alert`       | If `true`, hides the title/header in alert state          |
-
-These values are stored in the sensor's attributes and can be used in custom cards or templates via `state_attr()`.
+1. Edit your dashboard
+2. Click **Add Card**
+3. Select **Manual**
+4. Paste the code
+5. Change `sensor.YOUR_SENSOR_NAME` to your Combined Notifications sensor
+6. Click **Save**
 
 ---
 
-## ✨ Version History
+### 1. Basic — Hardcoded Colors
 
-### Version 3.6.0
-* **NEW:** Automatic fault count sensor for each notification sensor
-* Perfect for card badges showing numeric counts
-* Simplifies tracking multiple entity states
+Simple card with colors hardcoded directly in the YAML. Change the colors to match your dashboard. Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor.
 
-### Version 3.0
-* Live UI editing (no restart required)
-* Restructured settings layout for clarity
-* New: optional hidden alert titles for minimal displays
+```yaml
+type: custom:button-card
+entity: sensor.YOUR_SENSOR_NAME
+name: NOTIFICATIONS
+show_name: true
+show_icon: true
+show_state: false
+styles:
+  card:
+    - background-color: >
+        [[[ if (entity.state !== "") { return "#c80404"; } else { return
+        "rgba(67, 73, 82, 1)"; } ]]]
+    - border-radius: 10px
+    - padding: 6px 10px 10px 10px
+    - color: rgb(255, 255, 255)
+    - white-space: normal
+    - font-size: 20px
+  name:
+    - font-weight: bold
+    - text-align: center
+    - font-size: 23px
+    - margin-top: 0
+  label:
+    - white-space: normal
+    - display: block
+    - max-width: 100%
+    - padding-top: 5px
+    - text-align: center
+  icon:
+    - color: >
+        [[[ if (entity.state === "") { return "rgb(38, 141, 53)"; } else {
+        return "rgb(255, 255, 255)"; } ]]]
+    - width: 70px
+    - height: 70px
+    - margin: 5px 0
+icon: >
+  [[[ if (entity.state !== "") { return "mdi:alert-circle"; } else { return
+  "mdi:hand-okay"; } ]]]
+show_label: true
+label: >
+  [[[ if (entity.state !== "") { return entity.state; } else { return "All
+  CLEAR"; } ]]]
+tap_action:
+  action: none
+hold_action:
+  action: none
+```
 
 ---
 
-## 🔗 Related Projects
+### 2. Basic — Integration Colors
 
-* [Combined Notifications Card](https://github.com/Pjarbit/home-assistant-combined-notifications-card-new) — Lovelace frontend card designed to visualize this sensor
+Pulls colors and icons directly from your Combined Notifications sensor — no hardcoded values needed. Change your colors and icons in the integration and the card updates automatically. Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor.
+
+```yaml
+type: custom:button-card
+entity: sensor.YOUR_SENSOR_NAME
+name: NOTIFICATIONS
+show_name: true
+show_icon: true
+show_state: false
+styles:
+  card:
+    - background-color: >
+        [[[ if (entity.state !== "") { return entity.attributes.color_alert; }
+        else { return entity.attributes.color_clear; } ]]]
+    - border-radius: 10px
+    - padding: 6px 10px 10px 10px
+    - color: >
+        [[[ if (entity.state === "") { return entity.attributes.text_color_clear; }
+        else { return entity.attributes.text_color_alert; } ]]]
+    - white-space: normal
+    - font-size: 20px
+  name:
+    - font-weight: bold
+    - text-align: center
+    - font-size: 23px
+    - margin-top: 0
+  label:
+    - white-space: normal
+    - display: block
+    - max-width: 100%
+    - padding-top: 5px
+    - text-align: center
+  icon:
+    - color: >
+        [[[ if (entity.state === "") { return entity.attributes.icon_color_clear; }
+        else { return entity.attributes.icon_color_alert; } ]]]
+    - width: 70px
+    - height: 70px
+    - margin: 5px 0
+icon: >
+  [[[ if (entity.state !== "") { return entity.attributes.icon_alert; } else {
+  return entity.attributes.icon_clear; } ]]]
+show_label: true
+label: >
+  [[[ if (entity.state !== "") { return entity.state; } else { return
+  entity.attributes.text_all_clear; } ]]]
+tap_action:
+  action: none
+hold_action:
+  action: none
+```
+
+---
+
+### 3. Advanced — Integration Colors with card-mod (Recommended)
+
+![All Clear](media/card_all_clear.png)
+![Alert](media/card_alert.png)
+
+This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod). The card-mod section adds a light reflection effect for a polished appearance.
+
+Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor. Paste into a Manual card in your dashboard.
+
+```yaml
+type: custom:button-card
+entity: sensor.YOUR_SENSOR_NAME
+name: NOTIFICATIONS
+show_name: true
+show_icon: true
+show_state: false
+styles:
+  card:
+    - background-color: >
+        [[[ if (entity.state !== "") { return entity.attributes.color_alert; }
+        else { return entity.attributes.color_clear; } ]]]
+    - border-radius: 16px !important
+    - box-shadow: >
+        12px 12px 24px rgba(0, 0, 0, 0.5), -4px -4px 8px rgba(255, 255, 255,
+        0.1), inset -4px -4px 8px rgba(0, 0, 0, 0.2), inset 4px 4px 8px
+        rgba(255, 255, 255, 0.2) !important
+    - overflow: hidden !important
+    - padding: 6px 10px 10px 10px !important
+    - color: >
+        [[[ if (entity.state === "") { return entity.attributes.text_color_clear; }
+        else { return entity.attributes.text_color_alert; } ]]]
+    - white-space: normal
+    - position: relative !important
+    - font-size: 20px
+  name:
+    - font-weight: bold
+    - text-align: center
+    - font-size: 23px
+    - margin-top: 0
+  label:
+    - white-space: normal
+    - display: block
+    - max-width: 100%
+    - padding-top: 5px
+    - text-align: center
+  icon:
+    - color: >
+        [[[ if (entity.state === "") { return entity.attributes.icon_color_clear; }
+        else { return entity.attributes.icon_color_alert; } ]]]
+    - width: 70px
+    - height: 70px
+    - margin: 5px 0
+icon: >
+  [[[ if (entity.state !== "") { return entity.attributes.icon_alert; } else {
+  return entity.attributes.icon_clear; } ]]]
+show_label: true
+label: >
+  [[[ if (entity.state !== "") { return entity.state; } else { return
+  entity.attributes.text_all_clear; } ]]]
+tap_action:
+  action: none
+hold_action:
+  action: none
+card_mod:
+  style: |
+    ha-card::after {
+      content: '' !important;
+      position: absolute !important;
+      width: 100px !important;
+      height: 100% !important;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+      transform: skewX(-15deg) translateX(50px) !important;
+      top: 0 !important;
+      left: -20px !important;
+      z-index: 1 !important;
+    }
+```
+
+---
+
+## 🔔 Alert Ticker Card Pairing
+
+The [Alert Ticker Card](https://github.com/djdevil/AlertTicker-Card) is a complete alert design card system with unique dashboard card styling and functions.
+
+If you have just a few alerts to watch you can avoid Combined Notifications completely and use Alert Ticker alone. It will work well. If you have many alerts and like the Alert Ticker styling, pairing this integration with Alert Ticker cards is your best option. A marriage of Combined Notifications backend processing and sensor entities with the frontend of Alert Ticker Cards.
+
+```yaml
+type: custom:alert-ticker-card
+cycle_interval: 5
+show_when_clear: false
+alerts:
+  - entity: sensor.YOUR_SENSOR_NAME
+    operator: "!="
+    state: ""
+    message: Active Alerts
+    secondary_entity: sensor.YOUR_SENSOR_NAME
+    priority: 1
+    theme: emergency
+    icon: 🚨
+```
+
+The `secondary_entity` field displays the live sensor state — your active condition list — as a second line below the message.
+
+---
+
+## ⚡ Combined Notifications vs Alert Ticker
+
+This integration creates actual Home Assistant sensors that keep track of which of your entities are alerting and what they are. Because it's a sensor, you can do anything with it:
+
+1. Send a text when the garage is left open
+2. Flash a light when a door is unlocked
+3. Make an announcement when a window is open
+4. Show it on any dashboard card styled exactly how you want
+
+Alert Ticker is a great addition to HA. It has a ton of card styles. Because Combined Notifications is a sensor, you can easily use it with Alert Ticker cards if you wish. But here's why Combined Notifications is different and has a real advantage:
+
+1. All calculations happen in the background, not in your Lovelace frontend
+2. Monitor 100+ entities with zero performance hit. Try that with Alert Ticker!
+3. Too many dashboard cards doing this frontend work can make your dashboard nearly unusable. I know, I had over 100 conditional cards before building this. My dashboard was almost unusably slow. That was the reason this integration exists
+4. Sensor state survives browser refreshes and dashboard reloads without a performance hit
+5. Home Assistant history and logging are handled automatically
+
+---
+
+## 💬 A Note from the Developer
+
+This integration is free and will always be free. If you find it useful, skip the coffee and give $5 to someone who needs it.
+
+---
+
+## 🗑️ Removal
+
+- Go to **Settings → Devices & Services**
+- Find **Combined Notifications** and click **Delete**
+- The created sensors will be removed automatically
 
 ---
 
 ## 📄 License
 
-MIT License
-See `LICENSE` file for details
+MIT — see [LICENSE](LICENSE.md) for details.
