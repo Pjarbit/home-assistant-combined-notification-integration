@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Combined Notifications",
+        "description": "Create a new notification sensor. You can configure conditions and appearance after setup.",
+        "data": {
+          "name": "Sensor Name",
+          "friendly_sensor_name": "Friendly Display Name"
+        },
+        "data_description": {
+          "name": "Lowercase, underscores only, no spaces. This becomes your sensor entity ID.",
+          "friendly_sensor_name": "Optional — shown in dashboards instead of the sensor name."
+        }
+      }
+    },
+    "error": {
+      "already_configured": "A sensor with this name already exists.",
+      "invalid_name": "Name must contain at least one valid character (letters, numbers, underscores)."
+    },
+    "abort": {
+      "already_configured": "This sensor is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure Combined Notifications",
+        "description": "Use the Configure button in Devices & Services to open the full configuration panel."
+      }
+    }
+  }
+}
