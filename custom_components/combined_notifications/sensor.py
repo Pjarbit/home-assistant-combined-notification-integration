@@ -13,6 +13,7 @@ from .const import COLOR_MAP, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -20,54 +21,69 @@ async def async_setup_entry(
 ) -> None:
     """Set up the combined notification sensor from a config entry."""
     name = config_entry.data["name"]
-    friendly_sensor_name = config_entry.data.get("friendly_sensor_name", name)  # Default to name if not present
+    friendly_sensor_name = config_entry.data.get("friendly_sensor_name", name)
     conditions = config_entry.data.get("conditions", [])
-    settings = {
-        "text_all_clear": config_entry.data.get("text_all_clear", "ALL CLEAR"),
-        "icons": {
-            "clear": config_entry.data.get("icon_all_clear", "mdi:hand-okay"),
-            "alert": config_entry.data.get("icon_alert", "mdi:alert-circle"),
-        },
-        "colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("background_color_all_clear"), "Green"),
-            "alert": COLOR_MAP.get(config_entry.data.get("background_color_alert"), "Red"),
-        },
-        "text_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("text_color_all_clear", ""), ""),
-            "alert": COLOR_MAP.get(config_entry.data.get("text_color_alert", ""), ""),
-        },
-        "icon_colors": {
-            "clear": COLOR_MAP.get(config_entry.data.get("icon_color_all_clear", ""), ""),
-            "alert": COLOR_MAP.get(config_entry.data.get("icon_color_alert", ""), ""),
-        },
-        "hide_title": str(config_entry.data.get("hide_title", "False")).lower() == "true",
-        "hide_title_alert": str(config_entry.data.get("hide_title_alert", "False")).lower() == "true",
-    }
+    settings = _build_settings(config_entry.data)
 
-    sensor = CombinedNotificationSensor(hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id)
-    count_sensor = CombinedNotificationCountSensor(hass, name, sensor, config_entry.entry_id)
+    sensor = CombinedNotificationSensor(
+        hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id
+    )
+    count_sensor = CombinedNotificationCountSensor(
+        hass, name, sensor, config_entry.entry_id
+    )
     async_add_entities([sensor, count_sensor], update_before_add=True)
     hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = sensor
+
+
+def _build_settings(data: dict) -> dict:
+    """Build settings dict from config entry data."""
+    return {
+        "text_all_clear": data.get("text_all_clear", "ALL CLEAR"),
+        "icons": {
+            "clear": data.get("icon_all_clear", "mdi:hand-okay"),
+            "alert": data.get("icon_alert", "mdi:alert-circle"),
+        },
+        "colors": {
+            "clear": COLOR_MAP.get(data.get("background_color_all_clear"), ""),
+            "alert": COLOR_MAP.get(data.get("background_color_alert"), ""),
+        },
+        "text_colors": {
+            "clear": COLOR_MAP.get(data.get("text_color_all_clear", ""), ""),
+            "alert": COLOR_MAP.get(data.get("text_color_alert", ""), ""),
+        },
+        "icon_colors": {
+            "clear": COLOR_MAP.get(data.get("icon_color_all_clear", ""), ""),
+            "alert": COLOR_MAP.get(data.get("icon_color_alert", ""), ""),
+        },
+        "hide_title": str(data.get("hide_title", False)).lower() == "true",
+        "hide_title_alert": str(data.get("hide_title_alert", False)).lower() == "true",
+    }
+
 
 class CombinedNotificationSensor(Entity):
     """Representation of a Combined Notification sensor."""
 
-    def __init__(self, hass: HomeAssistant, name: str, friendly_sensor_name: str, conditions: list[dict], settings: dict[str, Any], entry_id: str):
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        name: str,
+        friendly_sensor_name: str,
+        conditions: list[dict],
+        settings: dict[str, Any],
+        entry_id: str,
+    ):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
         self._friendly_sensor_name = friendly_sensor_name
         self._entry_id = entry_id
-        
-        # Use friendly name if provided, otherwise fall back to name
-        self._attr_name = friendly_sensor_name if friendly_sensor_name and friendly_sensor_name.strip() else name
-        
-        self._conditions = [
-            condition for condition in conditions if self._validate_condition(condition)
-        ]
-        for condition in conditions:
-            if not self._validate_condition(condition):
-                _LOGGER.warning("Skipping malformed condition in %s: %s", name, condition)
+        self._attr_name = (
+            friendly_sensor_name
+            if friendly_sensor_name and friendly_sensor_name.strip()
+            else name
+        )
+        self._raw_conditions = conditions
+        self._conditions = self._validate_conditions(conditions)
         self._settings = settings
         self._state = settings["text_all_clear"]
         self._unmet = []
@@ -79,34 +95,92 @@ class CombinedNotificationSensor(Entity):
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_icon = settings["icons"]["clear"]
 
-    def _validate_condition(self, condition: dict) -> bool:
-        """Validate that a condition has all required keys."""
-        required_keys = ["entity_id", "operator", "trigger_value"]
-        return all(key in condition for key in required_keys)
+    # ── Condition validation ──────────────────────────────────────────────
+
+    def _validate_conditions(self, conditions: list[dict]) -> list[dict]:
+        """Return only conditions with required keys (skip entity_filter — handled at runtime)."""
+        valid = []
+        for c in conditions:
+            if c.get("disabled", False) or c.get("paused", False):
+                continue
+            if "entity_filter" in c:
+                # Smart group — always valid, expanded at runtime
+                valid.append(c)
+            elif all(k in c for k in ("entity_id", "operator", "trigger_value")):
+                valid.append(c)
+            else:
+                _LOGGER.warning("Skipping malformed condition in %s: %s", self._name, c)
+        return valid
+
+    # ── Entity expansion for smart groups ────────────────────────────────
+
+    def _expand_conditions(self) -> list[dict]:
+        """
+        Expand entity_filter conditions into individual concrete conditions
+        by scanning hass.states at runtime. Called on every async_update.
+        Individual conditions are returned as-is.
+        """
+        expanded = []
+        for condition in self._conditions:
+            if "entity_filter" not in condition:
+                # Regular individual condition
+                expanded.append(condition)
+                continue
+
+            keyword = condition["entity_filter"].lower()
+            excluded = set(condition.get("entity_filter_exclude", []))
+            operator = condition.get("operator", "==")
+            trigger_value = condition.get("trigger_value", "")
+            attribute = condition.get("attribute", "")
+            and_conditions = condition.get("and_conditions", [])
+
+            for state_obj in self._hass.states.async_all():
+                entity_id = state_obj.entity_id
+                if entity_id in excluded:
+                    continue
+                friendly_name = state_obj.attributes.get("friendly_name", entity_id)
+                if (
+                    keyword in entity_id.lower()
+                    or keyword in friendly_name.lower()
+                ):
+                    label_overrides = condition.get("entity_label_overrides", {})
+                    label = label_overrides.get(entity_id) or friendly_name
+                    expanded.append({
+                        "entity_id": entity_id,
+                        "operator": operator,
+                        "trigger_value": trigger_value,
+                        "attribute": attribute,
+                        "name": label,
+                        "and_conditions": and_conditions,
+                        "_from_filter": True,
+                    })
+
+        return expanded
+
+    # ── Properties ───────────────────────────────────────────────────────
 
     @property
     def name(self) -> str:
-        """Return the name of the sensor."""
         return self._name
 
     @property
     def unique_id(self) -> str:
-        """Return a unique ID for this entity."""
         return f"combined_notifications_{self._entry_id}"
 
     @property
     def state(self) -> str:
-        """Return the state of the sensor."""
         return self._state
 
     @property
     def icon(self) -> str:
-        """Return the icon to use in the frontend."""
-        return self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
+        return (
+            self._settings["icons"]["clear"]
+            if not self._unmet
+            else self._settings["icons"]["alert"]
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional attributes for the sensor."""
         return {
             "unmet_conditions": self._unmet,
             "number_unmet": len(self._unmet),
@@ -127,7 +201,6 @@ class CombinedNotificationSensor(Entity):
 
     @property
     def device_info(self):
-        """Return device information for the sensor."""
         return {
             "identifiers": {(DOMAIN, self._entry_id)},
             "name": self._name,
@@ -135,141 +208,225 @@ class CombinedNotificationSensor(Entity):
             "model": "Virtual Sensor",
         }
 
+    # ── State change listener ─────────────────────────────────────────────
+
     @callback
     def _state_change_listener(self, event):
         """Handle entity state changes with debouncing."""
         if self._debounced_update_task:
             self._debounced_update_task.cancel()
-            self._debounced_update_task = None
 
         async def debounced_update():
-            """Perform the actual update."""
-            _LOGGER.debug(f"Debounced update triggered by: {event.data.get('entity_id')}")
             self.async_schedule_update_ha_state(True)
             self._debounced_update_task = None
 
-        self._debounced_update_task = self._hass.async_create_task(debounced_update())
+        self._debounced_update_task = self._hass.async_create_task(
+            debounced_update()
+        )
+
+    # ── Lifecycle ─────────────────────────────────────────────────────────
 
     async def async_added_to_hass(self) -> None:
-        """Set up listeners when the sensor is added to Home Assistant."""
-        for condition in self._conditions:
-            entity_id = condition["entity_id"]
+        """Set up listeners when added to HA."""
+        await self._subscribe_listeners()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Clean up listeners."""
+        self._unsubscribe_all()
+        if self._debounced_update_task:
+            self._debounced_update_task.cancel()
+
+    async def _subscribe_listeners(self) -> None:
+        """Subscribe state change listeners for all tracked entities."""
+        self._unsubscribe_all()
+        # For individual conditions track directly
+        entity_ids = set()
+        for c in self._conditions:
+            if "entity_id" in c:
+                entity_ids.add(c["entity_id"])
+            # AND conditions
+            for and_cond in c.get("and_conditions", []):
+                if "entity_id" in and_cond:
+                    entity_ids.add(and_cond["entity_id"])
+
+        for entity_id in entity_ids:
             unsub = async_track_state_change_event(
                 self._hass, [entity_id], self._state_change_listener
             )
             self._unsubscribe_callbacks.append(unsub)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Clean up listeners when the sensor is removed from Home Assistant."""
+        # Smart groups: listen to all state changes so entity_filter conditions update live
+        if any("entity_filter" in c for c in self._conditions):
+            unsub = async_track_state_change_event(
+                self._hass, "*", self._state_change_listener
+            )
+            self._unsubscribe_callbacks.append(unsub)
+
+        # Smart groups: listen to all state changes so entity_filter conditions update live
+        if any("entity_filter" in c for c in self._conditions):
+            unsub = async_track_state_change_event(
+                self._hass, "*", self._state_change_listener
+            )
+            self._unsubscribe_callbacks.append(unsub)
+
+    def _unsubscribe_all(self) -> None:
         for unsub in self._unsubscribe_callbacks:
             unsub()
         self._unsubscribe_callbacks.clear()
-        if self._debounced_update_task:
-            self._debounced_update_task.cancel()
-            self._debounced_update_task = None
+
+    # ── Update ────────────────────────────────────────────────────────────
 
     async def async_update(self) -> None:
-        """Update the sensor state by evaluating all conditions."""
+        """Evaluate all conditions and update sensor state."""
         self._unmet = []
-        for condition in self._conditions:
-            # Skip disabled conditions
-            if condition.get("disabled", False):
-                continue
 
+        # Expand smart groups at runtime
+        expanded = self._expand_conditions()
+
+        for condition in expanded:
             entity_id = condition.get("entity_id")
-            operator = condition.get("operator", "==")
-            expected = condition.get("trigger_value")
-            label = condition.get("name", entity_id)
+            if not entity_id:
+                continue
 
             state_obj = self._hass.states.get(entity_id)
             if state_obj is None or state_obj.state in ("unknown", "unavailable"):
                 continue
 
-            actual = state_obj.state
-            if self._evaluate_condition(actual, expected, operator):
-                self._unmet.append(label)
+            # Use attribute if specified, otherwise entity state
+            attribute = condition.get("attribute", "")
+            if attribute:
+                actual = str(state_obj.attributes.get(attribute, ""))
+            else:
+                actual = state_obj.state
 
-        state = self._settings["text_all_clear"] if not self._unmet else ", ".join(self._unmet)
+            operator = condition.get("operator", "==")
+            trigger_value = condition.get("trigger_value", "")
+            label = condition.get("name", entity_id)
+
+            # Check main condition
+            if not self._evaluate(actual, trigger_value, operator):
+                continue
+
+            # Check AND conditions — all must be true for alert to fire
+            and_conditions = condition.get("and_conditions", [])
+            if and_conditions:
+                and_passed = True
+                for and_cond in and_conditions:
+                    and_entity_id = and_cond.get("entity_id")
+                    if not and_entity_id:
+                        continue
+                    and_state_obj = self._hass.states.get(and_entity_id)
+                    if and_state_obj is None or and_state_obj.state in (
+                        "unknown", "unavailable"
+                    ):
+                        and_passed = False
+                        break
+                    and_attr = and_cond.get("attribute", "")
+                    if and_attr:
+                        and_actual = str(
+                            and_state_obj.attributes.get(and_attr, "")
+                        )
+                    else:
+                        and_actual = and_state_obj.state
+                    if not self._evaluate(
+                        and_actual,
+                        and_cond.get("trigger_value", ""),
+                        and_cond.get("operator", "=="),
+                    ):
+                        and_passed = False
+                        break
+                if not and_passed:
+                    continue
+
+            self._unmet.append(label)
+
+        state = (
+            self._settings["text_all_clear"]
+            if not self._unmet
+            else ", ".join(self._unmet)
+        )
         self._state = state[:255]
         if len(state) > 255:
-            _LOGGER.warning("State truncated to 255 characters, original length: %s", len(state))
-        self._attr_icon = self._settings["icons"]["clear"] if not self._unmet else self._settings["icons"]["alert"]
-        
-        # Update the count sensor if it exists
-        if hasattr(self, '_count_sensor'):
+            _LOGGER.warning(
+                "State truncated to 255 characters for sensor %s", self._name
+            )
+        self._attr_icon = (
+            self._settings["icons"]["clear"]
+            if not self._unmet
+            else self._settings["icons"]["alert"]
+        )
+        if hasattr(self, "_count_sensor"):
             self._count_sensor.async_schedule_update_ha_state()
 
-    async def async_update_conditions(self, new_conditions: list[dict]) -> None:
-        """Update sensor conditions dynamically."""
-        _LOGGER.debug("Updating conditions: %s", new_conditions)
-        for unsub in self._unsubscribe_callbacks:
-            unsub()
-        self._unsubscribe_callbacks.clear()
-        self._conditions = [c for c in new_conditions if self._validate_condition(c)]
-        for condition in self._conditions:
-            unsub = async_track_state_change_event(
-                self._hass, [condition["entity_id"]], self._state_change_listener
-            )
-            self._unsubscribe_callbacks.append(unsub)
-        await self.async_update()
+    # ── Condition evaluator ───────────────────────────────────────────────
 
-    async def async_update_settings(self, new_settings: dict[str, Any], new_conditions: list[dict]) -> None:
-        """Update sensor settings and conditions dynamically."""
+    def _evaluate(self, actual: str, expected: str, operator: str) -> bool:
+        """Evaluate a single condition."""
+        # Convert friendly labels to symbols if needed
+        label_map = {
+            "equals": "==",
+            "not equal to": "!=",
+            "greater than": ">",
+            "less than": "<",
+        }
+        operator = label_map.get(operator, operator)
         try:
-            _LOGGER.debug("Received settings update: %s, conditions: %s", new_settings, new_conditions)
-            self._settings = new_settings
-            
-            # Update friendly name if provided
-            if "friendly_sensor_name" in new_settings and new_settings["friendly_sensor_name"]:
-                self._attr_name = new_settings["friendly_sensor_name"]
-                self._friendly_sensor_name = new_settings["friendly_sensor_name"]
-                _LOGGER.debug("Updated sensor friendly name to: %s", new_settings["friendly_sensor_name"])
-            
-            self._state = new_settings["text_all_clear"][:255]
-            self._attr_icon = new_settings["icons"]["clear"]
-            await self.async_update_conditions(new_conditions)
-            await self.async_update()
-            self.async_schedule_update_ha_state(True)
-            
-            # Force entity registry update for name change
-            self.async_write_ha_state()
-            
-            _LOGGER.debug("Settings and conditions updated successfully")
-        except Exception as e:
-            _LOGGER.error("Error updating settings: %s", e)
-            raise
-
-    def _evaluate_condition(self, actual: str, expected: str, operator: str) -> bool:
-        """Evaluate a condition using safe comparisons."""
-        try:
-            if operator == "==":
+            if operator in ("==", "="):
                 return str(actual) == str(expected)
             if operator == "!=":
                 return str(actual) != str(expected)
-            if operator == ">":
-                try:
-                    return float(actual) > float(expected)
-                except ValueError:
-                    return str(actual) > str(expected)
-            if operator == "<":
-                try:
-                    return float(actual) < float(expected)
-                except ValueError:
-                    return str(actual) < str(expected)
-        except Exception as err:
+            # Numeric comparisons
+            a, e = float(actual), float(expected)
+            if operator == ">":  return a > e
+            if operator == "<":  return a < e
+            if operator == ">=": return a >= e
+            if operator == "<=": return a <= e
+        except (ValueError, TypeError) as err:
             _LOGGER.warning(
-                "Failed to compare %s %s %s: %s",
-                actual, operator, expected, err
+                "Condition evaluation failed (%s %s %s): %s",
+                actual, operator, expected, err,
             )
-            return False
         return False
 
+    # ── Dynamic updates from panel ────────────────────────────────────────
+
+    async def async_update_conditions(self, new_conditions: list[dict]) -> None:
+        """Update conditions and re-subscribe listeners."""
+        self._raw_conditions = new_conditions
+        self._conditions = self._validate_conditions(new_conditions)
+        await self._subscribe_listeners()
+        await self.async_update()
+
+    async def async_update_settings(
+        self, new_settings: dict[str, Any], new_conditions: list[dict]
+    ) -> None:
+        """Update settings and conditions from the panel save."""
+        try:
+            self._settings = new_settings
+            if "friendly_sensor_name" in new_settings and new_settings["friendly_sensor_name"]:
+                self._attr_name = new_settings["friendly_sensor_name"]
+                self._friendly_sensor_name = new_settings["friendly_sensor_name"]
+            self._state = new_settings["text_all_clear"][:255]
+            self._attr_icon = new_settings["icons"]["clear"]
+            await self.async_update_conditions(new_conditions)
+            self.async_write_ha_state()
+        except Exception as err:
+            _LOGGER.error("Error updating settings: %s", err)
+            raise
+
+
+# ── Count sensor ──────────────────────────────────────────────────────────────
 
 class CombinedNotificationCountSensor(Entity):
     """Sensor that shows count of unmet conditions."""
 
-    def __init__(self, hass: HomeAssistant, name: str, parent_sensor: CombinedNotificationSensor, entry_id: str):
-        """Initialize the count sensor."""
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        name: str,
+        parent_sensor: CombinedNotificationSensor,
+        entry_id: str,
+    ):
         self._hass = hass
         self._parent = parent_sensor
         self._attr_name = f"{name} Fault Count"
@@ -281,14 +438,11 @@ class CombinedNotificationCountSensor(Entity):
 
     @property
     def state(self) -> int:
-        """Return the count of unmet conditions."""
         return len(self._parent._unmet)
 
     @property
     def device_info(self):
-        """Return device information to group with parent sensor."""
         return self._parent.device_info
 
     async def async_added_to_hass(self) -> None:
-        """Register this sensor with the parent."""
         self._parent._count_sensor = self
