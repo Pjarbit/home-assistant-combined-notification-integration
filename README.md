@@ -366,7 +366,7 @@ hold_action:
 ![All Clear](media/card_all_clear.png)
 ![Alert](media/card_alert.png)
 
-This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod). The card-mod section adds a light reflection effect for a polished appearance.
+This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod).(uix) The card is coded with card-mod for backward compatability. The card-mod section adds a light reflection effect for a polished appearance.
 
 Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor. Paste into a Manual card in your dashboard.
 
