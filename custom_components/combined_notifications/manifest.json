@@ -1,12 +1,13 @@
 {
   "domain": "combined_notifications",
   "name": "Combined Notifications",
-  "codeowners": ["@pjarbit"],
-  "config_flow": true,
-  "dependencies": [],
+  "version": "4.8.0",
   "documentation": "https://github.com/Pjarbit/home-assistant-combined-notification-integration",
-  "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Pjarbit/home-assistant-combined-notification-integration/issues",
+  "config_flow": true,
+  "dependencies": ["frontend", "websocket_api"],
+  "codeowners": ["@Pjarbit"],
+  "icon": "icon.png",
   "requirements": [],
-  "version": "3.7.0"
+  "iot_class": "local_push"
 }
