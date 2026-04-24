@@ -236,7 +236,7 @@ badge_icon: |
 
 ## 🖼️ Dashboard Cards
 
-There are other cards that are better (listed below) or you can simply use the Alert Ticker Cards if you like the styling.
+There is a Combined Notifications Card available in HACS, but unfortunately I can't recommend it. There are other cards that are better (listed below) or you can simply use the Alert Ticker Cards if you like the styling.
 
 Personally, I use the cards listed below. For my use, the alert ticker cards are too distracting and don't fit with the look of my dashboards. Styling is a personal decision. Pick what you like, the decision is yours.
 
@@ -251,9 +251,9 @@ To add any of these cards to your dashboard:
 
 ---
 
-### 1. Basic — Hardcoded Colors
+### 1. Basic Card — Hardcoded Colors (Overrides the integrated sensor styling)
 
-Simple card with colors hardcoded directly in the YAML. Change the colors to match your dashboard. Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor.
+Simple card with colors hardcoded directly in the YAML. Change the colors to match your dashboard. The only lines that need to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor and change the color values in the yaml code to match your preferences.
 
 ```yaml
 type: custom:button-card
@@ -305,7 +305,7 @@ hold_action:
 
 ---
 
-### 2. Basic — Integration Colors
+### 2. Basic — Card that uses the Integration Colors and Icons
 
 Pulls colors and icons directly from your Combined Notifications sensor — no hardcoded values needed. Change your colors and icons in the integration and the card updates automatically. Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor.
 
@@ -361,7 +361,7 @@ hold_action:
 
 ---
 
-### 3. Advanced — Integration Colors with card-mod (Recommended)
+### 3. Advanced — Card with Integration Colors with card-mod(uix) and advanced styling.
 
 ![All Clear](media/card_all_clear.png)
 ![Alert](media/card_alert.png)
