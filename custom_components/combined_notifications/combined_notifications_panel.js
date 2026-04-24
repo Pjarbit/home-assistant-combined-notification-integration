@@ -533,7 +533,7 @@ set panel(panel) {
   // ── Render ─────────────────────────────────────────────────────────────
 
   _renderHeaderStatus() {
-    const entityId = `sensor.${this._config?.name || ""}`;
+    const entityId = `sensor.${(this._config?.name || "").toLowerCase().replace(/\s+/g, "_")}`;
     const stateObj = this._hass?.states?.[entityId] || this._states?.[entityId];
     if (!stateObj) return html``;
     const isClear = stateObj.attributes?.is_clear !== false;
