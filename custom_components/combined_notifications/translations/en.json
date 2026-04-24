@@ -2,97 +2,32 @@
   "config": {
     "step": {
       "user": {
-        "title": "Basic Settings",
-        "description": "Set up a name and friendly sensor name for the notification.",
+        "title": "Combined Notifications",
+        "description": "Create a new notification sensor. You can configure conditions and appearance after setup.",
         "data": {
-          "name": "Notification Name",
-          "friendly_sensor_name": "Friendly Sensor Name (defaults to Notification Name if empty)"
-        }
-      },
-      "appearance": {
-        "title": "Appearance Settings",
-        "description": "Configure colors and icons for the notification.",
-        "data": {
-          "text_all_clear": "Text when All Clear",
-          "icon_all_clear": "Icon (Clear)",
-          "background_color_all_clear": "Background Color (Clear)",
-          "text_color_all_clear": "Text Color (Clear)",
-          "icon_color_all_clear": "Icon Color (Clear)",
-          "hide_title": "Hide Title (Clear)",
-          "icon_alert": "Icon (Alert)",
-          "background_color_alert": "Background Color (Alert)",
-          "text_color_alert": "Text Color (Alert)",
-          "icon_color_alert": "Icon Color (Alert)",
-          "hide_title_alert": "Hide Title (Alert)"
-        }
-      },
-      "add_condition": {
-        "title": "Add Condition",
-        "description": "Add an entity and define when it should trigger the notification.",
-        "data": {
-          "entity_id": "Entity",
-          "operator": "Operator",
-          "trigger_value": "Trigger Value",
-          "name": "Optional Label (defaults to entity_id)"
-        }
-      },
-      "confirm_conditions": {
-        "title": "Confirm Conditions",
-        "description": "Current conditions:\n{conditions}\n\nAdd another condition or save.",
-        "data": {
-          "add_another": "Add another condition"
-        }
-      },
-      "menu": {
-        "title": "Options Menu",
-        "description": "Select an option for {name}.",
-        "data": {
-          "menu_option": "Option"
-        }
-      },
-      "basic_settings": {
-        "title": "Basic Settings",
-        "description": "Edit basic settings for {name}.",
-        "data": {
-          "text_all_clear": "Text when All Clear"
-        }
-      },
-      "manage_conditions": {
-        "title": "Manage Conditions",
-        "description": "Manage conditions for the notification.",
-        "data": {
-          "action": "Action"
-        }
-      },
-      "list_conditions": {
-        "title": "List Conditions",
-        "description": "Current conditions:\n{conditions}",
-        "data": {
-          "condition_index": "Condition",
-          "condition_action": "Action"
-        }
-      },
-      "edit_condition": {
-        "title": "Edit Condition",
-        "description": "Edit the condition.",
-        "data": {
-          "entity_id": "Entity",
-          "operator": "Operator",
-          "trigger_value": "Trigger Value",
-          "name": "Optional Label (defaults to entity_id)",
-          "index": "Condition Index"
+          "name": "Sensor Name",
+          "friendly_sensor_name": "Friendly Display Name"
+        },
+        "data_description": {
+          "name": "Lowercase, underscores only, no spaces. This becomes your sensor entity ID.",
+          "friendly_sensor_name": "Optional — shown in dashboards instead of the sensor name."
         }
       }
     },
     "error": {
-      "already_configured": "A notification with this name already exists.",
-      "invalid_input": "Invalid input provided.",
-      "unknown": "An unexpected error occurred.",
-      "no_config_entry": "Configuration entry not found."
+      "already_configured": "A sensor with this name already exists.",
+      "invalid_name": "Name must contain at least one valid character (letters, numbers, underscores)."
     },
     "abort": {
-      "no_conditions": "At least one condition must be added.",
-      "already_configured": "A notification with this name already exists."
+      "already_configured": "This sensor is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure Combined Notifications",
+        "description": "Use the Configure button in Devices & Services to open the full configuration panel."
+      }
     }
   }
 }
