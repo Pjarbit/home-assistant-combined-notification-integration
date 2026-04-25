@@ -362,6 +362,12 @@ class CombinedNotificationSensor(Entity):
 
     def _evaluate(self, actual: str, expected: str, operator: str) -> bool:
         """Evaluate a single condition."""
+        # Fix v4 format where operator symbol was baked into trigger_value
+        for sym in (">=", "<=", "!=", ">", "<", "==", "="):
+            if isinstance(expected, str) and expected.startswith(sym):
+                operator = sym
+                expected = expected[len(sym):].strip()
+                break
         # Convert friendly labels to symbols if needed
         label_map = {
             "equals": "==",
