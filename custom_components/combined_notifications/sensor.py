@@ -44,16 +44,16 @@ def _build_settings(data: dict) -> dict:
             "alert": data.get("icon_alert", "mdi:alert-circle"),
         },
         "colors": {
-            "clear": COLOR_MAP.get(data.get("background_color_all_clear"), ""),
-            "alert": COLOR_MAP.get(data.get("background_color_alert"), ""),
+            "clear": COLOR_MAP.get(data.get("background_color_all_clear"), "rgb(67, 73, 82)"),
+            "alert": COLOR_MAP.get(data.get("background_color_alert"), "rgb(190, 11, 11)"),
         },
         "text_colors": {
-            "clear": COLOR_MAP.get(data.get("text_color_all_clear", ""), "rgb(241, 241, 241)"),
-            "alert": COLOR_MAP.get(data.get("text_color_alert", ""), "rgb(241, 241, 241)"),
+            "clear": COLOR_MAP.get(data.get("text_color_all_clear", ""), "rgb(47, 207, 118)"),
+            "alert": COLOR_MAP.get(data.get("text_color_alert", ""), "rgb(255, 255, 255)"),
         },
         "icon_colors": {
-            "clear": COLOR_MAP.get(data.get("icon_color_all_clear", ""), "rgb(241, 241, 241)"),
-            "alert": COLOR_MAP.get(data.get("icon_color_alert", ""), "rgb(241, 241, 241)"),
+            "clear": COLOR_MAP.get(data.get("icon_color_all_clear", ""), "rgb(47, 207, 118)"),
+            "alert": COLOR_MAP.get(data.get("icon_color_alert", ""), "rgb(255, 255, 255)"),
         },
         "hide_title": str(data.get("hide_title", False)).lower() == "true",
         "hide_title_alert": str(data.get("hide_title_alert", False)).lower() == "true",
