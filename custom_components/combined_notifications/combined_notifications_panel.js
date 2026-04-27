@@ -217,6 +217,16 @@ set panel(panel) {
   _setCondition(index, key, value) {
     const conditions = [...this._config.conditions];
     conditions[index] = { ...conditions[index], [key]: value };
+
+    const cond = conditions[index];
+    const isNew = cond.entity_filter_initialized === false || 
+      (cond.entity_filter_initialized === undefined && (cond.entity_filter_exclude || []).length === 0);
+    if (key === "entity_filter" && isNew) {
+      const allMatched = this._matchedEntities(conditions[index]);
+      conditions[index].entity_filter_exclude = allMatched.map(([id]) => id);
+      conditions[index].entity_filter_initialized = true;
+    }
+
     this._config = { ...this._config, conditions };
     this.requestUpdate();
   }
@@ -236,13 +246,15 @@ set panel(panel) {
     if (isFilter) {
       conditions.push({
         entity_filter: "",
+        entity_filter_name: "",
         operator: "equals",
         trigger_value: "",
         paused: false,
         and_conditions: [],
         entity_filter_exclude: [],
-        entity_filter_domains: [],
+        entity_filter_domains: [...DOMAIN_GROUPS["Other"]],
         entity_label_overrides: {},
+        entity_filter_initialized: false,
       });
     } else {
       conditions.push({
@@ -310,6 +322,7 @@ set panel(panel) {
     this._config = { ...this._config, conditions };
     this.requestUpdate();
   }
+
   _toggleAllEntities(condIndex, matched) {
     const conditions = [...this._config.conditions];
     const excluded = new Set(conditions[condIndex].entity_filter_exclude || []);
@@ -431,9 +444,6 @@ set panel(panel) {
 
   _isGroupExcluded(condition, groupName) {
     const excluded = new Set(condition.entity_filter_domains || []);
-    if (excluded.size === 0) {
-      return groupName === "Other";
-    }
     const groupDomains = DOMAIN_GROUPS[groupName] || [];
     return groupDomains.every(d => excluded.has(d));
   }
@@ -513,8 +523,8 @@ set panel(panel) {
     if (!keyword) return [];
 
     const excludedDomains = new Set(condition.entity_filter_domains || []);
-    const effectiveExcluded = excludedDomains.size > 0 
-      ? excludedDomains 
+    const effectiveExcluded = excludedDomains.size > 0
+      ? excludedDomains
       : new Set(DOMAIN_GROUPS["Other"]);
 
     return this._allEntityList.filter(([entityId, state]) => {
@@ -883,6 +893,7 @@ set panel(panel) {
     const matched = this._matchedEntities(condition);
     const excluded = new Set(condition.entity_filter_exclude || []);
     const activeCount = matched.filter(([id]) => !excluded.has(id)).length;
+    const groupName = condition.entity_filter_name || (condition.entity_filter ? `Smart Group — ${condition.entity_filter}` : "Smart Group");
     const sub = condition.entity_filter
       ? `${activeCount} entities · ${excluded.size} excluded · ${condition.operator || "equals"} ${condition.trigger_value || ""}`
       : "Not configured yet";
@@ -894,7 +905,7 @@ set panel(panel) {
             <div class="cond-dot ${condition.paused ? 'paused' : 'active'}"></div>
             <div class="cond-summary">
               <div class="cond-name">
-                Smart Group${condition.entity_filter ? ` — ${condition.entity_filter}` : ""}
+                ${condition.entity_filter_name || (condition.entity_filter ? `Smart Group — ${condition.entity_filter}` : "Smart Group")}
                 ${isPaused ? html`<span class="paused-pill">paused</span>` : ""}
               </div>
               <div class="cond-sub">${sub}</div>
@@ -920,6 +931,12 @@ set panel(panel) {
                 @input="${e => this._setCondition(index, "entity_filter", e.target.value)}">
               <div class="hint"><em>Type any word in the entity ID or device name</em></div>
             </div>
+            <div class="field">
+              <label>Custom Group Name <span class="optional">(optional)</span></label>
+              <input type="text" .value="${condition.entity_filter_name || ""}"
+                placeholder="e.g. Doors Open"
+                @input="${e => this._setCondition(index, "entity_filter_name", e.target.value)}">
+            </div>
 
             ${condition.entity_filter ? html`
               <div class="domain-filter">
@@ -927,8 +944,19 @@ set panel(panel) {
                 <div class="domain-chips">
                   ${this._getMatchedGroups(condition).map(groupName => {
                     const excluded = this._isGroupExcluded(condition, groupName);
+                    const groupDomains = DOMAIN_GROUPS[groupName] || [];
+                    const excludeList = new Set(condition.entity_filter_exclude || []);
+const keyword = (condition.entity_filter || "").toLowerCase();
+const hasIncluded = excluded && this._allEntityList
+  .filter(([id, s]) => {
+    const fn = (s.friendly_name || "").toLowerCase();
+    return id.toLowerCase().includes(keyword) || fn.includes(keyword);
+  })
+  .some(([id]) => groupDomains.includes(id.split(".")[0]) && !excludeList.has(id));
+                    const chipClass = !excluded ? "included" : "excluded";
+                    const chipStyle = (!excluded) ? "" : hasIncluded ? "animation: chip-pulse 2s ease-in-out infinite;" : "";
                     return html`
-                      <div class="domain-chip ${excluded ? "excluded" : "included"}"
+                      <div class="domain-chip ${chipClass}" style="${chipStyle}"
                         @click="${() => this._toggleGroup(index, groupName)}">
                         ${groupName}
                       </div>
@@ -1770,6 +1798,11 @@ set panel(panel) {
         border-color: rgba(246,173,85,0.2);
         color: #f6ad55;
       }
+      @keyframes chip-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+     
       .domain-chip:hover { opacity: 0.75; }
 
       .btn-close {
