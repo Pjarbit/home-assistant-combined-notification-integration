@@ -48,12 +48,12 @@ def _build_settings(data: dict) -> dict:
             "alert": COLOR_MAP.get(data.get("background_color_alert"), ""),
         },
         "text_colors": {
-            "clear": COLOR_MAP.get(data.get("text_color_all_clear", ""), ""),
-            "alert": COLOR_MAP.get(data.get("text_color_alert", ""), ""),
+            "clear": COLOR_MAP.get(data.get("text_color_all_clear", ""), "rgb(241, 241, 241)"),
+            "alert": COLOR_MAP.get(data.get("text_color_alert", ""), "rgb(241, 241, 241)"),
         },
         "icon_colors": {
-            "clear": COLOR_MAP.get(data.get("icon_color_all_clear", ""), ""),
-            "alert": COLOR_MAP.get(data.get("icon_color_alert", ""), ""),
+            "clear": COLOR_MAP.get(data.get("icon_color_all_clear", ""), "rgb(241, 241, 241)"),
+            "alert": COLOR_MAP.get(data.get("icon_color_alert", ""), "rgb(241, 241, 241)"),
         },
         "hide_title": str(data.get("hide_title", False)).lower() == "true",
         "hide_title_alert": str(data.get("hide_title_alert", False)).lower() == "true",
@@ -301,7 +301,10 @@ class CombinedNotificationSensor(Entity):
 
             operator = condition.get("operator", "==")
             trigger_value = condition.get("trigger_value", "")
-            label = condition.get("name", entity_id)
+            label = condition.get("name", "").strip()
+            if not label:
+                state_obj2 = self._hass.states.get(entity_id)
+                label = state_obj2.attributes.get("friendly_name", entity_id) if state_obj2 else entity_id
 
             # Check main condition
             if not self._evaluate(actual, trigger_value, operator):
@@ -338,7 +341,8 @@ class CombinedNotificationSensor(Entity):
                 if not and_passed:
                     continue
 
-            self._unmet.append(label)
+            if label and label.strip():
+                self._unmet.append(label)
 
         state = (
             self._settings["text_all_clear"]
