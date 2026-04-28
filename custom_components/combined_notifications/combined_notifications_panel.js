@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.0.6
+ * Combined Notifications Panel v4.8.0
  * Custom Lovelace panel for configuring Combined Notifications sensors.
  * Communicates with HA via websocket API.
  */
@@ -677,14 +677,25 @@ set panel(panel) {
   }
 
   _matchedEntities(condition) {
+    // Returns ALL keyword-matched entities regardless of domain chips
+    // Used for monitoring, counts, Overview tab
     const keyword = (condition.entity_filter || "").toLowerCase();
     if (!keyword) return [];
+    return this._allEntityList.filter(([entityId, state]) => {
+      const fn = (state.friendly_name || "").toLowerCase();
+      return entityId.toLowerCase().includes(keyword) || fn.includes(keyword);
+    });
+  }
 
+  _visibleEntities(condition) {
+    // Returns keyword-matched entities filtered by domain chips
+    // Used ONLY for rendering the entity list inside the smart group card
+    const keyword = (condition.entity_filter || "").toLowerCase();
+    if (!keyword) return [];
     const excludedDomains = new Set(condition.entity_filter_domains || []);
     const effectiveExcluded = excludedDomains.size > 0
       ? excludedDomains
       : new Set(DOMAIN_GROUPS["Other"]);
-
     return this._allEntityList.filter(([entityId, state]) => {
       const fn = (state.friendly_name || "").toLowerCase();
       const matches = entityId.toLowerCase().includes(keyword) || fn.includes(keyword);
@@ -785,7 +796,7 @@ set panel(panel) {
 
           <!-- Footer -->
           <div class="dialog-footer">
-            <span class="version-stamp">pja 1.6</span>
+            <span class="version-stamp">pja 2.4</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1071,12 +1082,13 @@ set panel(panel) {
   _renderSmartGroupCard(condition, index) {
     const isOpen = this._expandedConditions.has(index);
     const isPaused = condition.paused || false;
-    const matched = this._matchedEntities(condition);
+    const allMatched = this._matchedEntities(condition);
+    const visible = this._visibleEntities(condition);
     const excluded = new Set(condition.entity_filter_exclude || []);
-    const activeCount = matched.filter(([id]) => !excluded.has(id)).length;
+    const activeCount = allMatched.filter(([id]) => !excluded.has(id)).length;
     const groupName = condition.entity_filter_name || (condition.entity_filter ? `Smart Group — ${condition.entity_filter}` : "Smart Group");
     const sub = condition.entity_filter
-      ? `${activeCount} entities · ${excluded.size} excluded · ${condition.operator || "equals"} ${condition.trigger_value || ""}`
+      ? `${activeCount} / ${allMatched.length} found · ${condition.operator || "equals"} ${condition.trigger_value || ""}`
       : "Not configured yet";
 
     return html`
@@ -1111,6 +1123,9 @@ set panel(panel) {
                 placeholder="e.g. battery, door, light"
                 @input="${e => this._setCondition(index, "entity_filter", e.target.value)}">
               <div class="hint"><em>Type any word in the entity ID or device name</em></div>
+              ${condition.entity_filter ? html`
+                <span class="keyword-count">${allMatched.length} / ${this._allEntityList.length} keyword search</span>
+              ` : ""}
             </div>
             <div class="field">
               <label>Custom Group Name <span class="optional">(optional)</span></label>
@@ -1156,14 +1171,14 @@ const hasIncluded = excluded && this._allEntityList
             ${condition.entity_filter ? html`
               <div class="entity-list">
                 <div class="entity-list-header">
-                  <span>Matching entities in your system</span>
-                  <div style="display:flex;align-items:center;gap:10px">
-                    <span class="match-count">${matched.length} found · ${excluded.size} excluded</span>
-                    <button class="list-action-btn exclude-btn" @click="${() => this._excludeFromList(index, matched)}">Exclude<br>from list</button>
-                    <button class="list-action-btn include-btn" @click="${() => this._includeFromList(index, matched)}">Include<br>from list</button>
+                  <span class="entity-list-title">Matching entities in your system</span>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="match-count">${activeCount} / ${allMatched.length} included</span>
+                    <button class="list-action-btn include-all-btn" @click="${() => this._includeFromList(index, visible)}">Include All</button>
+                    <button class="list-action-btn exclude-all-btn" @click="${() => this._excludeFromList(index, visible)}">Exclude All</button>
                   </div>
                 </div>
-                ${matched.map(([entityId, state]) => {
+                ${visible.map(([entityId, state]) => {
                   const overrides = condition.entity_label_overrides || {};
                   const customLabel = overrides[entityId] || "";
                   return html`
@@ -1426,11 +1441,11 @@ const hasIncluded = excluded && this._allEntityList
         height: 18px;
         padding: 0 4px;
         border-radius: 20px;
-        background: #ffd701;
+        background: rgba(255,215,1,0.7);
+        border: 1px solid rgba(255,215,1,0.8);
         color: #080a0f;
         font-size: 0.62rem;
         font-weight: 700;
-        opacity: 1;
       }
 
       /* Tabs */
@@ -1736,7 +1751,23 @@ const hasIncluded = excluded && this._allEntityList
       .cond-dot.paused { background: #f6ad55; }
       .cond-summary { flex: 1; min-width: 0; }
       .cond-name { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; }
-      .cond-sub { font-size: 0.75rem; color: #94a3b8; font-family: monospace; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .cond-sub { font-size: 0.75rem; color: #63b3ed; font-family: monospace; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      .keyword-count {
+        font-size: 0.78rem;
+        color: #63b3ed;
+        font-family: monospace;
+        font-weight: 600;
+        margin-top: 4px;
+        display: block;
+      }
+
+      .entity-list-title {
+        font-size: 0.78rem;
+        color: #63b3ed;
+        font-family: monospace;
+        font-weight: 600;
+      }
       .cond-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
 
       .paused-pill {
@@ -1869,23 +1900,21 @@ const hasIncluded = excluded && this._allEntityList
         font-family: monospace;
       }
       .match-count { color: #63b3ed; font-weight: 600; }
-      .toggle-all-btn,
       .list-action-btn {
-        background: transparent;
-        border: 1px solid rgba(255,255,255,0.15);
+        border: none;
         border-radius: 6px;
-        color: #94a3b8;
-        font-size: 0.72rem;
+        font-size: 0.78rem;
         font-family: 'DM Sans', sans-serif;
-        padding: 3px 8px;
+        font-weight: 600;
+        padding: 4px 10px;
         cursor: pointer;
         transition: all 0.15s;
         text-align: center;
-        line-height: 1.3;
       }
-      .list-action-btn:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.3); }
-      .exclude-btn:hover { color: #fc8181; border-color: rgba(252,129,129,0.5); }
-      .include-btn:hover { color: #68d391; border-color: rgba(104,211,145,0.5); }
+      .include-all-btn { background: rgba(47,207,118,0.85); color: #080a0f; }
+      .include-all-btn:hover { background: rgb(47,207,118); }
+      .exclude-all-btn { background: rgba(246,173,85,0.85); color: #080a0f; }
+      .exclude-all-btn:hover { background: #f6ad55; }
       .entity-item {
         display: flex;
         align-items: flex-start;
