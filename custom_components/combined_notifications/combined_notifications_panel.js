@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v4.8.0
+ * Combined Notifications Panel v5.0.6
  * Custom Lovelace panel for configuring Combined Notifications sensors.
  * Communicates with HA via websocket API.
  */
@@ -323,14 +323,20 @@ set panel(panel) {
     this.requestUpdate();
   }
 
-  _toggleAllEntities(condIndex, matched) {
+  _excludeFromList(condIndex, matched) {
     const conditions = [...this._config.conditions];
     const excluded = new Set(conditions[condIndex].entity_filter_exclude || []);
-    if (excluded.size === matched.length) {
-      conditions[condIndex] = { ...conditions[condIndex], entity_filter_exclude: [] };
-    } else {
-      conditions[condIndex] = { ...conditions[condIndex], entity_filter_exclude: matched.map(([id]) => id) };
-    }
+    matched.forEach(([id]) => excluded.add(id));
+    conditions[condIndex] = { ...conditions[condIndex], entity_filter_exclude: [...excluded] };
+    this._config = { ...this._config, conditions };
+    this.requestUpdate();
+  }
+
+  _includeFromList(condIndex, matched) {
+    const conditions = [...this._config.conditions];
+    const excluded = new Set(conditions[condIndex].entity_filter_exclude || []);
+    matched.forEach(([id]) => excluded.delete(id));
+    conditions[condIndex] = { ...conditions[condIndex], entity_filter_exclude: [...excluded] };
     this._config = { ...this._config, conditions };
     this.requestUpdate();
   }
@@ -505,6 +511,158 @@ set panel(panel) {
     }
     return total;
   }
+
+  get _individualCount() {
+    return this._individualConditions.filter(c => !c.paused).length;
+  }
+
+  get _individualPausedCount() {
+    return this._individualConditions.filter(c => c.paused).length;
+  }
+
+  get _smartGroupCount() {
+    return this._smartGroups.filter(c => !c.paused).length;
+  }
+
+  get _smartGroupEntityCount() {
+    let total = 0;
+    for (const sg of this._smartGroups) {
+      if (sg.paused) continue;
+      const excluded = new Set(sg.entity_filter_exclude || []);
+      total += this._matchedEntities(sg).filter(([id]) => !excluded.has(id)).length;
+    }
+    return total;
+  }
+
+  get _smartGroupPausedCount() {
+    return this._smartGroups.filter(c => c.paused).length;
+  }
+
+  get _overviewEntityCount() {
+    // All individual conditions + all smart group entities (including paused, excluded)
+    let total = this._individualConditions.length;
+    for (const sg of this._smartGroups) {
+      const excluded = new Set(sg.entity_filter_exclude || []);
+      total += this._matchedEntities(sg).filter(([id]) => !excluded.has(id)).length;
+    }
+    return total;
+  }
+
+  _buildOverviewRows() {
+    const rows = [];
+    const conditions = this._config.conditions || [];
+
+    // Individual conditions
+    for (const [idx, cond] of conditions.entries()) {
+      if ("entity_filter" in cond) continue;
+      if (!cond.entity_id) continue;
+      const state = this._currentState(cond.entity_id);
+      const friendly = (() => {
+        const found = this._allEntityList.find(([id]) => id === cond.entity_id);
+        return found ? (found[1].friendly_name || cond.entity_id) : cond.entity_id;
+      })();
+      const isAlert = (() => {
+        if (cond.paused) return false;
+        return this._evalCondition(state, cond.operator, cond.trigger_value);
+      })();
+      rows.push({
+        name: cond.name || friendly,
+        entityId: cond.entity_id,
+        domain: cond.entity_id.split(".")[0],
+        state,
+        operator: cond.operator,
+        triggerValue: cond.trigger_value || "",
+        sourceType: "Individual",
+        sourceLabel: cond.name || friendly,
+        paused: !!cond.paused,
+        alert: isAlert,
+      });
+    }
+
+    // Smart group entities
+    for (const [idx, cond] of conditions.entries()) {
+      if (!("entity_filter" in cond)) continue;
+      const excluded = new Set(cond.entity_filter_exclude || []);
+      const matched = this._matchedEntities(cond);
+      const groupLabel = cond.entity_filter_name || (cond.entity_filter ? `Smart Group: ${cond.entity_filter}` : "Smart Group");
+      for (const [entityId, s] of matched) {
+        if (excluded.has(entityId)) continue;
+        const state = this._currentState(entityId);
+        const overrides = cond.entity_label_overrides || {};
+        const displayName = overrides[entityId] || s.friendly_name || entityId;
+        const isAlert = (() => {
+          if (cond.paused) return false;
+          return this._evalCondition(state, cond.operator, cond.trigger_value);
+        })();
+        rows.push({
+          name: displayName,
+          entityId,
+          domain: entityId.split(".")[0],
+          state,
+          operator: cond.operator,
+          triggerValue: cond.trigger_value || "",
+          sourceType: "Group",
+          sourceLabel: groupLabel,
+          paused: !!cond.paused,
+          alert: isAlert,
+        });
+      }
+    }
+
+    // Sort by domain then by name within domain
+    rows.sort((a, b) => {
+      if (a.domain !== b.domain) return a.domain.localeCompare(b.domain);
+      return a.name.localeCompare(b.name);
+    });
+
+    return rows;
+  }
+
+  _evalCondition(state, operator, triggerValue) {
+    const op = OPERATOR_LABEL_TO_SYMBOL[operator] || operator;
+    const numState = parseFloat(state);
+    const numTrigger = parseFloat(triggerValue);
+    const hasNums = !isNaN(numState) && !isNaN(numTrigger);
+    if (op === "==") return hasNums ? numState === numTrigger : state === triggerValue;
+    if (op === "!=") return hasNums ? numState !== numTrigger : state !== triggerValue;
+    if (op === ">")  return hasNums && numState > numTrigger;
+    if (op === "<")  return hasNums && numState < numTrigger;
+    return false;
+  }
+
+  _pluralizeDomain(domain) {
+    const map = {
+      "binary_sensor": "Binary Sensors",
+      "sensor": "Sensors",
+      "switch": "Switches",
+      "lock": "Locks",
+      "light": "Lights",
+      "cover": "Covers",
+      "climate": "Climate",
+      "person": "People",
+      "device_tracker": "Device Trackers",
+      "media_player": "Media Players",
+      "automation": "Automations",
+      "script": "Scripts",
+      "scene": "Scenes",
+      "input_boolean": "Input Booleans",
+      "input_select": "Input Selects",
+      "input_number": "Input Numbers",
+      "camera": "Cameras",
+      "update": "Updates",
+      "number": "Numbers",
+      "select": "Selects",
+      "button": "Buttons",
+    };
+    return map[domain] || domain;
+  }
+
+  _formatCondition(operator, triggerValue) {
+    const op = OPERATOR_LABEL_TO_SYMBOL[operator] || operator;
+    const symbol = op === "==" ? "=" : op === "!=" ? "≠" : op;
+    return `${symbol} ${triggerValue}`;
+  }
+
   _getMatchedDomains(condition) {
     const keyword = (condition.entity_filter || "").toLowerCase();
     if (!keyword) return [];
@@ -589,12 +747,23 @@ set panel(panel) {
               @click="${() => { this._activeTab = "general"; this.requestUpdate(); }}">
               General
             </button>
-            <button class="tab ${this._activeTab === "conditions" ? "active" : ""}"
-              @click="${() => { this._activeTab = "conditions"; this.requestUpdate(); }}">
-              Conditions
-              <span class="badge blue" title="${this._totalConditions} Conditions">${this._totalConditions}</span>
-              <span class="badge teal" title="${this._totalEntities} Entities">${this._totalEntities}</span>
-              ${this._totalPaused > 0 ? html`<span class="badge orange" title="${this._totalPaused} Paused">${this._totalPaused}</span>` : ""}
+            <button class="tab ${this._activeTab === "individual" ? "active" : ""}"
+              @click="${() => { this._activeTab = "individual"; this.requestUpdate(); }}">
+              Individual
+              <span class="badge blue" title="${this._individualCount} Active">${this._individualCount}</span>
+              ${this._individualPausedCount > 0 ? html`<span class="badge orange" title="${this._individualPausedCount} Paused">${this._individualPausedCount}</span>` : ""}
+            </button>
+            <button class="tab ${this._activeTab === "smartgroups" ? "active" : ""}"
+              @click="${() => { this._activeTab = "smartgroups"; this.requestUpdate(); }}">
+              Smart Groups
+              <span class="badge blue" title="${this._smartGroupCount} Groups">${this._smartGroupCount}</span>
+              <span class="badge teal" title="${this._smartGroupEntityCount} Entities">${this._smartGroupEntityCount}</span>
+              ${this._smartGroupPausedCount > 0 ? html`<span class="badge orange" title="${this._smartGroupPausedCount} Paused">${this._smartGroupPausedCount}</span>` : ""}
+            </button>
+            <button class="tab ${this._activeTab === "overview" ? "active" : ""}"
+              @click="${() => { this._activeTab = "overview"; this.requestUpdate(); }}">
+              Overview
+              <span class="badge blue" title="${this._overviewEntityCount} Monitored">${this._overviewEntityCount}</span>
             </button>
           </div>
 
@@ -608,11 +777,15 @@ set panel(panel) {
 
           <!-- Panel body -->
           <div class="panel-body">
-            ${this._activeTab === "general" ? this._renderGeneral() : this._renderConditions()}
+            ${this._activeTab === "general"     ? this._renderGeneral()     : ""}
+            ${this._activeTab === "individual"  ? this._renderIndividual()  : ""}
+            ${this._activeTab === "smartgroups" ? this._renderSmartGroups() : ""}
+            ${this._activeTab === "overview"    ? this._renderOverview()    : ""}
           </div>
 
           <!-- Footer -->
           <div class="dialog-footer">
+            <span class="version-stamp">pja 1.6</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -746,16 +919,13 @@ set panel(panel) {
     `;
   }
 
-  // ── Conditions tab ─────────────────────────────────────────────────────
+  // ── Individual Conditions tab ──────────────────────────────────────────
 
-  _renderConditions() {
+  _renderIndividual() {
     const conditions = this._config.conditions || [];
     const individual = conditions.map((c, i) => ({ c, i })).filter(({ c }) => !("entity_filter" in c));
-    const groups = conditions.map((c, i) => ({ c, i })).filter(({ c }) => "entity_filter" in c);
-    const allConditions = conditions.map((c, i) => ({ c, i }));
 
     return html`
-      <!-- Individual Conditions -->
       <div class="group-card">
         <div class="group-header" style="display:flex;align-items:center;justify-content:space-between">
           <span>Individual Conditions</span>
@@ -764,15 +934,26 @@ set panel(panel) {
           </button>
         </div>
         <div class="group-body">
+          <div class="hint" style="font-style:italic">
+            Monitor a specific entity one at a time. Each condition watches a single device and alerts when it matches your defined value.
+          </div>
           ${individual.length === 0 ? html`<div class="empty-hint">No individual conditions yet. Add one below.</div>` : ""}
           ${individual.map(({ c, i }) => this._renderConditionCard(c, i))}
-          <button class="add-btn" @click="${() => this._addCondition(false)}">
+          <button class="add-btn" @click="${() => { this._addCondition(false); this._activeTab = "individual"; }}">
             <span class="plus">+</span> Add Individual Monitored Device / Entity
           </button>
         </div>
       </div>
+    `;
+  }
 
-      <!-- Smart Groups -->
+  // ── Smart Groups tab ───────────────────────────────────────────────────
+
+  _renderSmartGroups() {
+    const conditions = this._config.conditions || [];
+    const groups = conditions.map((c, i) => ({ c, i })).filter(({ c }) => "entity_filter" in c);
+
+    return html`
       <div class="group-card">
         <div class="group-header" style="display:flex;align-items:center;justify-content:space-between">
           <span>Smart Groups</span>
@@ -788,7 +969,7 @@ set panel(panel) {
           </div>
           ${groups.length === 0 ? html`<div class="empty-hint">No smart groups yet. Add one below.</div>` : ""}
           ${groups.map(({ c, i }) => this._renderSmartGroupCard(c, i))}
-          <button class="add-btn" @click="${() => this._addCondition(true)}">
+          <button class="add-btn" @click="${() => { this._addCondition(true); this._activeTab = "smartgroups"; }}">
             <span class="plus">+</span> Add Smart Group — bulk add devices by keyword
           </button>
         </div>
@@ -978,9 +1159,8 @@ const hasIncluded = excluded && this._allEntityList
                   <span>Matching entities in your system</span>
                   <div style="display:flex;align-items:center;gap:10px">
                     <span class="match-count">${matched.length} found · ${excluded.size} excluded</span>
-                    <button class="toggle-all-btn" @click="${() => this._toggleAllEntities(index, matched)}">
-                      ${excluded.size === matched.length ? "Include All" : "Exclude All"}
-                    </button>
+                    <button class="list-action-btn exclude-btn" @click="${() => this._excludeFromList(index, matched)}">Exclude<br>from list</button>
+                    <button class="list-action-btn include-btn" @click="${() => this._includeFromList(index, matched)}">Include<br>from list</button>
                   </div>
                 </div>
                 ${matched.map(([entityId, state]) => {
@@ -1035,6 +1215,58 @@ const hasIncluded = excluded && this._allEntityList
           </div>
         ` : ""}
       </div>
+    `;
+  }
+
+  // ── Overview tab ───────────────────────────────────────────────────────
+
+  _renderOverview() {
+    const rows = this._buildOverviewRows();
+
+    const domainMap = new Map();
+    for (const row of rows) {
+      if (!domainMap.has(row.domain)) domainMap.set(row.domain, []);
+      domainMap.get(row.domain).push(row);
+    }
+    const domains = [...domainMap.keys()].sort();
+
+    return html`
+      <!-- Color key -->
+      <div class="overview-key">
+        <span class="overview-key-item"><span class="overview-dot alert"></span> Alerting</span>
+        <span class="overview-key-item"><span class="overview-dot paused"></span> Paused</span>
+        <span class="overview-key-item"><span class="overview-dot ok"></span> OK</span>
+      </div>
+
+      ${rows.length === 0 ? html`
+        <div class="empty-hint" style="padding:12px 4px;font-style:italic">No monitored entities yet. Add conditions in the Individual or Groups tabs.</div>
+      ` : html`
+        <div class="overview-scroll-wrap">
+          <div class="overview-container">
+            <div class="overview-thead">
+              <span>Entity</span>
+              <span>State</span>
+              <span>Condition</span>
+            </div>
+            ${domains.map(domain => html`
+              <div class="overview-domain-divider">${this._pluralizeDomain(domain)}</div>
+              ${domainMap.get(domain).map(row => html`
+                <div class="overview-row ${row.alert ? "row-alert" : row.paused ? "row-paused" : "row-ok"}">
+                  <div class="overview-entity-cell">
+                    <span class="overview-entity-name">${row.name}</span>
+                    <span class="overview-source-pill">
+                      <span class="overview-source-type">${row.sourceType} —</span>
+                      <span class="overview-source-name">${row.sourceLabel}</span>
+                    </span>
+                  </div>
+                  <span class="overview-state">${row.state}</span>
+                  <span class="overview-condition">${this._formatCondition(row.operator, row.triggerValue)}</span>
+                </div>
+              `)}
+            `)}
+          </div>
+        </div>
+      `}
     `;
   }
 
@@ -1180,7 +1412,6 @@ const hasIncluded = excluded && this._allEntityList
         font-size: 0.72rem;
         font-family: monospace;
         font-style: italic;
-        opacity: 0.7;
         display: flex;
         align-items: center;
         gap: 5px;
@@ -1209,17 +1440,18 @@ const hasIncluded = excluded && this._allEntityList
         padding: 12px 20px 0;
         border-bottom: 2px solid rgba(255,255,255,0.08);
         margin-top: 4px;
+        flex-wrap: wrap;
       }
       .tab {
         height: 40px;
-        padding: 0 18px;
+        padding: 0 14px;
         border-radius: 8px 8px 0 0;
         border: 2px solid rgba(255,255,255,0.08);
         border-bottom: none;
         background: rgba(255,255,255,0.04);
         color: #94a3b8;
         font-family: 'DM Sans', sans-serif;
-        font-size: 0.95rem;
+        font-size: 0.88rem;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.18s;
@@ -1228,6 +1460,7 @@ const hasIncluded = excluded && this._allEntityList
         display: flex;
         align-items: center;
         gap: 5px;
+        white-space: nowrap;
       }
       .tab:hover { color: #e2e8f0; background: rgba(255,255,255,0.07); }
       .tab.active {
@@ -1285,6 +1518,7 @@ const hasIncluded = excluded && this._allEntityList
         gap: 16px;
         max-height: 68vh;
         overflow-y: auto;
+        min-height: 0;
       }
       .panel-body::-webkit-scrollbar { width: 4px; }
       .panel-body::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 4px; }
@@ -1582,7 +1816,7 @@ const hasIncluded = excluded && this._allEntityList
       /* Exact warning */
       .exact-warning {
         font-size: 0.82rem;
-        color: #94a3b8;
+        color: #ffd701;
         font-family: 'DM Sans', sans-serif;
         display: flex;
         align-items: flex-start;
@@ -1635,19 +1869,23 @@ const hasIncluded = excluded && this._allEntityList
         font-family: monospace;
       }
       .match-count { color: #63b3ed; font-weight: 600; }
-      .toggle-all-btn {
+      .toggle-all-btn,
+      .list-action-btn {
         background: transparent;
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 6px;
         color: #94a3b8;
         font-size: 0.72rem;
         font-family: 'DM Sans', sans-serif;
-        padding: 2px 8px;
+        padding: 3px 8px;
         cursor: pointer;
         transition: all 0.15s;
+        text-align: center;
+        line-height: 1.3;
       }
-
-      .toggle-all-btn:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.3); }
+      .list-action-btn:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.3); }
+      .exclude-btn:hover { color: #fc8181; border-color: rgba(252,129,129,0.5); }
+      .include-btn:hover { color: #68d391; border-color: rgba(104,211,145,0.5); }
       .entity-item {
         display: flex;
         align-items: flex-start;
@@ -1734,6 +1972,7 @@ const hasIncluded = excluded && this._allEntityList
       }
       .error-msg { font-size: 0.82rem; color: #fc8181; flex: 1; }
       .saved-msg { font-size: 0.82rem; color: #68d391; }
+      .version-stamp { font-size: 0.65rem; color: #64748b; font-family: monospace; margin-right: auto; }
       .footer-buttons { display: flex; gap: 10px; margin-left: auto; }
       .btn-cancel {
         padding: 9px 18px;
@@ -1919,6 +2158,147 @@ const hasIncluded = excluded && this._allEntityList
         color: #e2e8f0;
       }
       .entity-label-input::placeholder { color: #475569; }
+
+      /* Overview tab */
+      .overview-key {
+        display: flex;
+        gap: 16px;
+        padding: 10px 14px;
+        background: #161b26;
+        border: 2px solid rgba(99,179,237,0.2);
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-family: 'DM Sans', sans-serif;
+        color: #94a3b8;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .overview-key-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .overview-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .overview-dot.alert  { background: rgba(252,129,129,0.9); }
+      .overview-dot.paused { background: #f6ad55; }
+      .overview-dot.ok     { background: rgb(47,207,118); }
+
+      .overview-scroll-wrap {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        border-radius: 12px;
+      }
+      .overview-scroll-wrap::-webkit-scrollbar { width: 4px; }
+      .overview-scroll-wrap::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 4px; }
+      .overview-container {
+        background: #161b26;
+        border: 2px solid rgba(99,179,237,0.2);
+        border-radius: 12px;
+        overflow-y: auto;
+        max-height: calc(68vh - 130px);
+      }
+      .overview-domain-divider {
+        padding: 6px 14px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #63b3ed;
+        font-family: monospace;
+        background: rgba(99,179,237,0.06);
+        border-top: 1px solid rgba(99,179,237,0.12);
+        border-bottom: 1px solid rgba(99,179,237,0.08);
+      }
+      .overview-container > .overview-domain-divider:first-of-type {
+        border-top: none;
+      }
+      .overview-thead {
+        display: grid;
+        grid-template-columns: 1fr 100px 90px;
+        padding: 6px 14px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #475569;
+        font-family: 'DM Sans', sans-serif;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .overview-row {
+        display: grid;
+        grid-template-columns: 1fr 100px 90px;
+        align-items: center;
+        padding: 9px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        gap: 8px;
+      }
+      .overview-row:last-child { border-bottom: none; }
+      .overview-row.row-alert  { background: rgba(252,129,129,0.06); border-left: 3px solid rgba(252,129,129,0.6); padding-left: 11px; }
+      .overview-row.row-paused { background: rgba(246,173,85,0.06);  border-left: 3px solid rgba(246,173,85,0.5);  padding-left: 11px; }
+      .overview-row.row-ok     { background: transparent; }
+      .overview-entity-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+      .overview-entity-name {
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .overview-row.row-alert  .overview-entity-name { color: #fc8181; }
+      .overview-row.row-paused .overview-entity-name { color: #f6ad55; }
+      .overview-source-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 1px 7px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        font-size: 0.62rem;
+        font-family: monospace;
+        width: fit-content;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      .overview-source-type {
+        color: #63b3ed;
+        font-weight: 700;
+      }
+      .overview-source-name {
+        color: #94a3b8;
+      }
+      .overview-state {
+        font-size: 0.78rem;
+        font-family: monospace;
+        color: #68d391;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .overview-row.row-alert  .overview-state { color: #fc8181; }
+      .overview-row.row-paused .overview-state { color: #f6ad55; }
+      .overview-condition {
+        font-size: 0.78rem;
+        font-family: monospace;
+        color: #94a3b8;
+        white-space: nowrap;
+      }
     `;
   }
 }
