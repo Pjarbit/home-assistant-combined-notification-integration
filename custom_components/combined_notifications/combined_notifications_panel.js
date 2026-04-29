@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v4.8.0
+ * Combined Notifications Panel v5.8.0
  * Custom Lovelace panel for configuring Combined Notifications sensors.
  * Communicates with HA via websocket API.
  */
