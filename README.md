@@ -372,7 +372,7 @@ Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your se
 
 ```yaml
 type: custom:button-card
-entity: sensor.YOUR_SENSOR_NAME
+entity: sensor.home_conditions
 name: NOTIFICATIONS
 show_name: true
 show_icon: true
@@ -380,8 +380,9 @@ show_state: false
 styles:
   card:
     - background-color: >
-        [[[ if (entity.state !== "") { return entity.attributes.color_alert; }
-        else { return entity.attributes.color_clear; } ]]]
+        [[[ if (!entity.attributes.is_clear) { return
+        entity.attributes.color_alert; } else { return
+        entity.attributes.color_clear; } ]]]
     - border-radius: 16px !important
     - box-shadow: >
         12px 12px 24px rgba(0, 0, 0, 0.5), -4px -4px 8px rgba(255, 255, 255,
@@ -390,8 +391,9 @@ styles:
     - overflow: hidden !important
     - padding: 6px 10px 10px 10px !important
     - color: >
-        [[[ if (entity.state === "") { return entity.attributes.text_color_clear; }
-        else { return entity.attributes.text_color_alert; } ]]]
+        [[[ if (!entity.attributes.is_clear) { return
+        entity.attributes.text_color_alert; } else { return
+        entity.attributes.text_color_clear; } ]]]
     - white-space: normal
     - position: relative !important
     - font-size: 20px
@@ -408,17 +410,18 @@ styles:
     - text-align: center
   icon:
     - color: >
-        [[[ if (entity.state === "") { return entity.attributes.icon_color_clear; }
-        else { return entity.attributes.icon_color_alert; } ]]]
+        [[[ if (!entity.attributes.is_clear) { return
+        entity.attributes.icon_color_alert; } else { return
+        entity.attributes.icon_color_clear; } ]]]
     - width: 70px
     - height: 70px
     - margin: 5px 0
 icon: >
-  [[[ if (entity.state !== "") { return entity.attributes.icon_alert; } else {
-  return entity.attributes.icon_clear; } ]]]
+  [[[ if (!entity.attributes.is_clear) { return entity.attributes.icon_alert; }
+  else { return entity.attributes.icon_clear; } ]]]
 show_label: true
 label: >
-  [[[ if (entity.state !== "") { return entity.state; } else { return
+  [[[ if (!entity.attributes.is_clear) { return entity.state; } else { return
   entity.attributes.text_all_clear; } ]]]
 tap_action:
   action: none
@@ -442,6 +445,7 @@ card_mod:
       left: -20px !important;
       z-index: 1 !important;
     }
+
 ```
 
 ---
