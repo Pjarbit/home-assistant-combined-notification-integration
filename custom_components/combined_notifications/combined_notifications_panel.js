@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.0.9
+ * Combined Notifications Panel v5.1.0
  * Custom Lovelace panel for configuring Combined Notifications sensors.
  * Communicates with HA via websocket API.
  */
@@ -565,7 +565,12 @@ set panel(panel) {
       })();
       const isAlert = (() => {
         if (cond.paused) return false;
-        return this._evalCondition(state, cond.operator, cond.trigger_value);
+        if (!this._evalCondition(state, cond.operator, cond.trigger_value)) return false;
+        for (const ac of (cond.and_conditions || [])) {
+          const acState = this._currentState(ac.entity_id);
+          if (!this._evalCondition(acState, ac.operator, ac.trigger_value)) return false;
+        }
+        return true;
       })();
       rows.push({
         name: cond.name || friendly,
@@ -798,7 +803,7 @@ set panel(panel) {
 
           <!-- Footer -->
           <div class="dialog-footer">
-            <span class="version-stamp">pja 2.5</span>
+            <span class="version-stamp">pja 2.6</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -948,7 +953,7 @@ set panel(panel) {
       <div class="group-card">
         <div class="group-header">Backup & Restore</div>
         <div class="group-body">
-          <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor, open its panel, go to General tab, and import the backup file. You can rename the sensor later through Settings → Entities in Home Assistant.</em></div>
+          <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor with the same name, open its panel, and import the backup file.</em></div>
           <div class="backup-row">
             <button class="backup-btn export-btn" @click="${this._exportBackup}">
               ⬇ Export Backup
