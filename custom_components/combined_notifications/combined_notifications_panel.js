@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.0.8
+ * Combined Notifications Panel v5.0.9
  * Custom Lovelace panel for configuring Combined Notifications sensors.
  * Communicates with HA via websocket API.
  */
@@ -85,6 +85,7 @@ class CombinedNotificationsPanel extends LitElement {
       _expandedConditions: { type: Object },
       _totalPaused: { type: Number },
       _entitySearch: { type: Object },
+      _backupMsg:    { type: String },
     };
   }
 
@@ -99,6 +100,7 @@ class CombinedNotificationsPanel extends LitElement {
   this._loading = false;
   this._expandedConditions = new Set();
   this._entitySearch = {};
+  this._backupMsg = "";
   this._allEntityList = [];
   this._debounceTimer = null;
 }
@@ -813,6 +815,50 @@ set panel(panel) {
     `;
   }
 
+  // ── Backup / Restore ───────────────────────────────────────────────────
+
+  _exportBackup() {
+    const name = this._config.name || "sensor";
+    const filename = `${name}_backup.json`;
+    const blob = new Blob([JSON.stringify(this._config, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    this._backupMsg = `✓ Exported ${filename}`;
+    this.requestUpdate();
+    setTimeout(() => { this._backupMsg = ""; this.requestUpdate(); }, 4000);
+  }
+
+  _triggerImport() {
+    const input = this.shadowRoot.getElementById("backup-file-input");
+    if (input) input.click();
+  }
+
+  async _importBackup(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!confirm(`This will replace ALL current settings and conditions with the backup from "${file.name}". Are you sure?`)) {
+        e.target.value = "";
+        return;
+      }
+      this._config = { ...data };
+      await this._saveConfig();
+      this._backupMsg = `✓ Restored from ${file.name}`;
+      this.requestUpdate();
+      setTimeout(() => { this._backupMsg = ""; this.requestUpdate(); }, 4000);
+    } catch (err) {
+      this._backupMsg = `✗ Failed to read backup: ${err.message}`;
+      this.requestUpdate();
+    }
+    e.target.value = "";
+  }
+
   // ── General tab ────────────────────────────────────────────────────────
 
   _renderGeneral() {
@@ -895,6 +941,25 @@ set panel(panel) {
         <div class="group-body">
           ${this._toggle("Hide title in all-clear state", "Shows only the icon when everything is OK", "hide_title", c.hide_title)}
           ${this._toggle("Hide title in alert state", "Shows only the icon and condition list when alerting", "hide_title_alert", c.hide_title_alert)}
+        </div>
+      </div>
+
+      <!-- Backup / Restore -->
+      <div class="group-card">
+        <div class="group-header">Backup & Restore</div>
+        <div class="group-body">
+          <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor, open its panel, go to General tab, and import the backup file. You can rename the sensor later through Settings → Entities in Home Assistant.</em></div>
+          <div class="backup-row">
+            <button class="backup-btn export-btn" @click="${this._exportBackup}">
+              ⬇ Export Backup
+            </button>
+            <button class="backup-btn import-btn" @click="${this._triggerImport}">
+              ⬆ Import Backup
+            </button>
+            <input type="file" id="backup-file-input" accept=".json" style="display:none"
+              @change="${this._importBackup}">
+          </div>
+          ${this._backupMsg ? html`<div class="backup-msg">${this._backupMsg}</div>` : ""}
         </div>
       </div>
     `;
@@ -2002,6 +2067,41 @@ const hasIncluded = excluded && this._allEntityList
       .error-msg { font-size: 0.82rem; color: #fc8181; flex: 1; }
       .saved-msg { font-size: 0.82rem; color: #68d391; }
       .version-stamp { font-size: 0.65rem; color: #64748b; font-family: monospace; margin-right: auto; }
+
+      /* Backup & Restore */
+      .backup-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .backup-btn {
+        padding: 9px 18px;
+        border-radius: 8px;
+        border: none;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .export-btn {
+        background: rgba(99,179,237,0.15);
+        border: 1px solid rgba(99,179,237,0.35);
+        color: #63b3ed;
+      }
+      .export-btn:hover { background: rgba(99,179,237,0.25); }
+      .import-btn {
+        background: rgba(104,211,145,0.15);
+        border: 1px solid rgba(104,211,145,0.35);
+        color: #68d391;
+      }
+      .import-btn:hover { background: rgba(104,211,145,0.25); }
+      .backup-msg {
+        font-size: 0.82rem;
+        color: #68d391;
+        font-family: monospace;
+        margin-top: 4px;
+      }
       .footer-buttons { display: flex; gap: 10px; margin-left: auto; }
       .btn-cancel {
         padding: 9px 18px;
