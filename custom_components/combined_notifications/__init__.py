@@ -1,6 +1,7 @@
 """Combined Notifications integration."""
 import logging
 import os
+import time
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.components import frontend, websocket_api
@@ -48,25 +49,15 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Combined Notifications component."""
     hass.data.setdefault(DOMAIN, {})
 
+    # Register static panel file
     panel_path = os.path.join(os.path.dirname(__file__), PANEL_FILENAME)
-    panel_js_url = PANEL_URL + ".js"
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(PANEL_URL + ".js", panel_path, False)
+    ])
 
-    # Only register static path if not already registered
-    existing_urls = [str(r.resource) for r in hass.http.app.router.routes()]
-    if panel_js_url not in existing_urls:
-        await hass.http.async_register_static_paths([
-            StaticPathConfig(panel_js_url, panel_path, False)
-        ])
-
-    # Only register websocket commands if not already registered
-    try:
-        websocket_api.async_register_command(hass, websocket_get_config)
-    except Exception:
-        pass
-    try:
-        websocket_api.async_register_command(hass, websocket_save_config)
-    except Exception:
-        pass
+    # Register websocket commands (needed for the panel to work)
+    websocket_api.async_register_command(hass, websocket_get_config)
+    websocket_api.async_register_command(hass, websocket_save_config)
 
     return True
 
@@ -77,6 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
+    # Register panel with strong cache buster
     panel_url = f"combined-notifications-{entry.entry_id}"
     frontend.async_register_built_in_panel(
         hass,
@@ -87,7 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config={
             "_panel_custom": {
                 "name": "combined-notifications-panel",
-                "js_url": PANEL_URL + ".js?v=4",
+                "js_url": PANEL_URL + f".js?v={int(time.time())}",
                 "embed_iframe": False,
                 "trust_external_script": False,
                 "config": {"entry_id": entry.entry_id},
