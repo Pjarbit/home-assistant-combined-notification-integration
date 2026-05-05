@@ -1,31 +1,36 @@
 /**
- * Combined Notifications Panel v5.2.0
+ * Combined Notifications Panel v5.2.1
  * Fixed LitElement detection for 2025+ Home Assistant
- * Version Marker: 5.2.0-litfix
+ * Version Marker: 5.2.1-litfix
  */
 
 let LitElement, html, css;
 
-if (window.LitElement) {
-  LitElement = window.LitElement;
-} else if (customElements.get("ha-panel-lovelace")) {
-  LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
-} else if (customElements.get("hui-view")) {
-  LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
-} else {
+try {
+  if (window.LitElement) {
+    LitElement = window.LitElement;
+  } else if (customElements.get("ha-panel-lovelace")) {
+    LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
+  } else if (customElements.get("hui-view")) {
+    LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
+  } else {
+    LitElement = HTMLElement;
+  }
+
+  html = LitElement.prototype.html || window.html;
+  css = LitElement.prototype.css || window.css;
+
+} catch (e) {
+  console.error("CN Panel: Lit detection failed", e);
   LitElement = HTMLElement;
-}
-
-html = LitElement.prototype.html || window.html;
-css = LitElement.prototype.css || window.css || ((strings, ...values) => strings.raw.join(''));
-
-// Fallback if css is missing
-if (typeof css !== "function") {
+  html = (strings, ...values) => strings.raw.join('');
   css = (strings, ...values) => strings.raw.join('');
 }
 
-definePanel();
+if (typeof html !== "function") html = (strings, ...values) => strings.raw.join('');
+if (typeof css !== "function") css = (strings, ...values) => strings.raw.join('');
 
+definePanel();
 function definePanel() {
 
 // ---------------------------------------------------------------------------
@@ -838,7 +843,7 @@ set panel(panel) {
 
           <!-- Footer -->
           <div class="dialog-footer">
-            <span class="version-stamp">pja 3.8</span>
+            <span class="version-stamp">pja 3.9</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
