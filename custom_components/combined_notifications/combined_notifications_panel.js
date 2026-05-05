@@ -1,7 +1,7 @@
 /**
- * Combined Notifications Panel v5.1.3
+ * Combined Notifications Panel v5.1.5
  * Fixed LitElement detection for 2025+ Home Assistant
- * Version Marker: 5.1.3-litfix
+ * Version Marker: 5.1.5-litfix
  */
 
 let LitElement, html, css;
@@ -154,8 +154,8 @@ set panel(panel) {
   // ── Websocket helpers ──────────────────────────────────────────────────
 
   get _entryId() {
-  return this.panel?.config?._panel_custom?.config?.entry_id || "";
-}
+    return this.panel?.config?._panel_custom?.config?.entry_id || "";
+  }
 
   async _loadConfig() {
     try {
@@ -163,8 +163,40 @@ set panel(panel) {
         type: "combined_notifications/get_config",
         entry_id: this._entryId,
       });
+
       this._config = { ...result.config };
       this._states = result.states || {};
+
+      if (!this._config.conditions) this._config.conditions = [];
+      this._totalPaused = this._config.conditions.filter(c => c.paused).length;
+
+      this._config.conditions = this._config.conditions.map(c => ({
+        ...c,
+        operator: OPERATOR_SYMBOL_TO_LABEL[c.operator] || c.operator,
+        and_conditions: (c.and_conditions || []).map(ac => ({
+          ...ac,
+          operator: OPERATOR_SYMBOL_TO_LABEL[ac.operator] || ac.operator,
+        })),
+      }));
+
+      this._loadStates();
+
+    } catch (e) {
+      console.log("CN Panel: error:", e);
+      this._error = `Failed to load config: ${e.message}`;
+    }
+    this.requestUpdate();
+  }
+
+  async _loadStates() {
+    try {
+      const result = await this.hass.callWS({
+        type: "combined_notifications/get_states",
+        entry_id: this._entryId,
+      });
+
+      this._states = result.states || {};
+
       this._allEntityList = Object.entries(this._states)
         .map(([id, s]) => {
           const normalized = {
@@ -179,21 +211,11 @@ set panel(panel) {
           const db = b[0].split(".")[0];
           return da !== db ? da.localeCompare(db) : a[0].localeCompare(b[0]);
         });
-      if (!this._config.conditions) this._config.conditions = [];
-      this._totalPaused = this._config.conditions.filter(c => c.paused).length;
 
-      // Convert operator symbols to labels for display
-      this._config.conditions = this._config.conditions.map(c => ({
-        ...c,
-        operator: OPERATOR_SYMBOL_TO_LABEL[c.operator] || c.operator,
-        and_conditions: (c.and_conditions || []).map(ac => ({
-          ...ac,
-          operator: OPERATOR_SYMBOL_TO_LABEL[ac.operator] || ac.operator,
-        })),
-      }));
     } catch (e) {
-      console.log("CN Panel: error:", e);
-      this._error = `Failed to load config: ${e.message}`;
+      console.log("CN Panel: error loading states:", e);
+      this._states = {};
+      this._allEntityList = [];
     }
     this.requestUpdate();
   }
@@ -819,7 +841,7 @@ set panel(panel) {
 
           <!-- Footer -->
           <div class="dialog-footer">
-            <span class="version-stamp">pja 2.9</span>
+            <span class="version-stamp">pja 3.2</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
