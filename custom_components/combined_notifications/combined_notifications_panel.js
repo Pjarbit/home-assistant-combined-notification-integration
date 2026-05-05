@@ -1,7 +1,7 @@
 /**
- * Combined Notifications Panel v5.1.5
+ * Combined Notifications Panel v5.1.6
  * Fixed LitElement detection for 2025+ Home Assistant
- * Version Marker: 5.1.5-litfix
+ * Version Marker: 5.1.6-litfix
  */
 
 let LitElement, html, css;
@@ -189,6 +189,7 @@ set panel(panel) {
   }
 
   async _loadStates() {
+    await new Promise(r => setTimeout(r, 50));   // tiny delay — lets HA finish panel transition
     try {
       const result = await this.hass.callWS({
         type: "combined_notifications/get_states",
@@ -841,7 +842,7 @@ set panel(panel) {
 
           <!-- Footer -->
           <div class="dialog-footer">
-            <span class="version-stamp">pja 3.2</span>
+            <span class="version-stamp">pja 3.5</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
