@@ -55,8 +55,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         StaticPathConfig(PANEL_URL + ".js", panel_path, False)
     ])
 
-    # Register websocket commands (needed for the panel to work)
+    # Register websocket commands
     websocket_api.async_register_command(hass, websocket_get_config)
+    websocket_api.async_register_command(hass, websocket_get_states)
     websocket_api.async_register_command(hass, websocket_save_config)
 
     return True
@@ -68,7 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
-    # Register panel with strong cache buster
+    # Register panel
     panel_url = f"combined-notifications-{entry.entry_id}"
     frontend.async_register_built_in_panel(
         hass,
@@ -115,7 +116,26 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 })
 @websocket_api.async_response
 async def websocket_get_config(hass, connection, msg):
-    """Return the current config for an entry."""
+    """Return the current config for an entry. States loaded later."""
+    entry_id = msg["entry_id"]
+    entry = hass.config_entries.async_get_entry(entry_id)
+    if not entry:
+        connection.send_error(msg["id"], "not_found", "Config entry not found")
+        return
+
+    connection.send_result(msg["id"], {
+        "config": dict(entry.data),
+        "states": {}   # ← will be loaded later
+    })
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): "combined_notifications/get_states",
+    vol.Required("entry_id"): str,
+})
+@websocket_api.async_response
+async def websocket_get_states(hass, connection, msg):
+    """Return entity states - called by the panel after it loads."""
     entry_id = msg["entry_id"]
     entry = hass.config_entries.async_get_entry(entry_id)
     if not entry:
@@ -131,10 +151,7 @@ async def websocket_get_config(hass, connection, msg):
         for state in hass.states.async_all()
     }
 
-    connection.send_result(msg["id"], {
-        "config": dict(entry.data),
-        "states": states,
-    })
+    connection.send_result(msg["id"], {"states": states})
 
 
 @websocket_api.websocket_command({
