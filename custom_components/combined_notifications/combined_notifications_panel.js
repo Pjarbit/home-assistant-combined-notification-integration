@@ -1,27 +1,23 @@
 /**
- * Combined Notifications Panel v5.1.6
+ * Combined Notifications Panel v5.2.0
  * Fixed LitElement detection for 2025+ Home Assistant
- * Version Marker: 5.1.6-litfix
+ * Version Marker: 5.2.0-litfix
  */
 
 let LitElement, html, css;
 
-// Reliable LitElement detection
-if (customElements.get("ha-panel-lovelace")) {
+if (window.LitElement) {
+  LitElement = window.LitElement;
+} else if (customElements.get("ha-panel-lovelace")) {
   LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
-} 
-else if (customElements.get("hui-view")) {
+} else if (customElements.get("hui-view")) {
   LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
-} 
-else if (customElements.get("ha-card")) {
-  LitElement = Object.getPrototypeOf(customElements.get("ha-card"));
-} 
-else {
+} else {
   LitElement = HTMLElement;
 }
 
-html = LitElement.prototype.html;
-css = LitElement.prototype.css;
+html = LitElement.prototype.html || window.html;
+css = LitElement.prototype.css || window.css || ((strings, ...values) => strings.raw.join(''));
 
 // Fallback if css is missing
 if (typeof css !== "function") {
@@ -842,7 +838,7 @@ set panel(panel) {
 
           <!-- Footer -->
           <div class="dialog-footer">
-            <span class="version-stamp">pja 3.5</span>
+            <span class="version-stamp">pja 3.8</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
