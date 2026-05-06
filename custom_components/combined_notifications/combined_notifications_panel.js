@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.5.2
+ * Combined Notifications Panel v5.5.3
  * Style injection fix for UIX / card-mod compatibility
  */
 
