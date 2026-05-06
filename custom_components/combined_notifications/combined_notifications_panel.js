@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.3.0
+ * Combined Notifications Panel v5.5.0
  * Style injection fix for UIX / card-mod compatibility
  */
 
@@ -943,7 +943,7 @@ class CombinedNotificationsPanel extends LitElement {
   }
 
   connectedCallback() {
-    super.connectedCallback();
+    if (super.connectedCallback) super.connectedCallback();
     this._injectStyles();
     this._maybeLoadConfig();
   }
@@ -1606,7 +1606,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja 4.0</span>
+            <span class="version-stamp">pja 4.2</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
