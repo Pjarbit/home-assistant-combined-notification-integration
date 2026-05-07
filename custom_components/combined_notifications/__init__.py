@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components import frontend, websocket_api
 from homeassistant.components.http import StaticPathConfig
 import voluptuous as vol
-from .const import DOMAIN
+from .const import DOMAIN, COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -172,35 +172,38 @@ async def websocket_save_config(hass, connection, msg):
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
 
-    new_data = {**entry.data, **msg["data"]}
-    hass.config_entries.async_update_entry(entry, data=new_data)
+    try:
+        new_data = {**entry.data, **msg["data"]}
+        hass.config_entries.async_update_entry(entry, data=new_data)
 
-    sensor = hass.data.get(DOMAIN, {}).get(entry_id)
-    if sensor and hasattr(sensor, "async_update_settings"):
-        from .const import COLOR_MAP
-        d = new_data
-        settings = {
-            "text_all_clear": d.get("text_all_clear", "ALL CLEAR"),
-            "friendly_sensor_name": d.get("friendly_sensor_name", ""),
-            "icons": {
-                "clear": d.get("icon_all_clear", "mdi:hand-okay"),
-                "alert": d.get("icon_alert", "mdi:alert-circle"),
-            },
-            "colors": {
-                "clear": COLOR_MAP.get(d.get("background_color_all_clear"), ""),
-                "alert": COLOR_MAP.get(d.get("background_color_alert"), ""),
-            },
-            "text_colors": {
-                "clear": COLOR_MAP.get(d.get("text_color_all_clear", ""), ""),
-                "alert": COLOR_MAP.get(d.get("text_color_alert", ""), ""),
-            },
-            "icon_colors": {
-                "clear": COLOR_MAP.get(d.get("icon_color_all_clear", ""), ""),
-                "alert": COLOR_MAP.get(d.get("icon_color_alert", ""), ""),
-            },
-            "hide_title": d.get("hide_title", False),
-            "hide_title_alert": d.get("hide_title_alert", False),
-        }
-        await sensor.async_update_settings(settings, d.get("conditions", []))
+        sensor = hass.data.get(DOMAIN, {}).get(entry_id)
+        if sensor and hasattr(sensor, "async_update_settings"):
+            d = new_data
+            settings = {
+                "text_all_clear": d.get("text_all_clear", "ALL CLEAR"),
+                "friendly_sensor_name": d.get("friendly_sensor_name", ""),
+                "icons": {
+                    "clear": d.get("icon_all_clear", "mdi:hand-okay"),
+                    "alert": d.get("icon_alert", "mdi:alert-circle"),
+                },
+                "colors": {
+                    "clear": COLOR_MAP.get(d.get("background_color_all_clear"), ""),
+                    "alert": COLOR_MAP.get(d.get("background_color_alert"), ""),
+                },
+                "text_colors": {
+                    "clear": COLOR_MAP.get(d.get("text_color_all_clear", ""), ""),
+                    "alert": COLOR_MAP.get(d.get("text_color_alert", ""), ""),
+                },
+                "icon_colors": {
+                    "clear": COLOR_MAP.get(d.get("icon_color_all_clear", ""), ""),
+                    "alert": COLOR_MAP.get(d.get("icon_color_alert", ""), ""),
+                },
+                "hide_title": d.get("hide_title", False),
+                "hide_title_alert": d.get("hide_title_alert", False),
+            }
+            await sensor.async_update_settings(settings, d.get("conditions", []))
 
-    connection.send_result(msg["id"], {"success": True})
+        connection.send_result(msg["id"], {"success": True})
+    except Exception as err:
+        _LOGGER.exception("Failed to save config")
+        connection.send_error(msg["id"], "save_failed", str(err))
