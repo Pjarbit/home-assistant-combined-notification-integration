@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.5.3
+ * Combined Notifications Panel v5.5.5
  * Style injection fix for UIX / card-mod compatibility
  */
 
@@ -30,11 +30,11 @@ if (typeof html !== "function") html = (strings, ...values) => strings.raw.join(
 if (typeof css !== "function") css = (strings, ...values) => strings.raw.join('');
 
 try {
-  console.log('%cCombined Notifications v5.5.1 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v5.5.4 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
 
   definePanel();
 
-  console.log('%cCombined Notifications v5.5.1 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v5.5.4 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
 
@@ -1625,7 +1625,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja 4.3</span>
+            <span class="version-stamp">pja 4.4</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
