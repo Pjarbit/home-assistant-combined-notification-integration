@@ -1,7 +1,7 @@
 """Combined Notifications integration."""
+# Integration version: 5.5.4
 import logging
 import os
-import time
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.components import frontend, websocket_api
@@ -11,7 +11,8 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-PANEL_URL = "/combined_notifications_panel"
+VERSION_SLUG = "554"
+PANEL_URL = f"/combined_notifications_panel_{VERSION_SLUG}"
 PANEL_FILENAME = "combined_notifications_panel.js"
 
 
@@ -49,13 +50,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Combined Notifications component."""
     hass.data.setdefault(DOMAIN, {})
 
-    # Register static panel file
     panel_path = os.path.join(os.path.dirname(__file__), PANEL_FILENAME)
+    _LOGGER.info("Registering CN panel from: %s", panel_path)
+
+    if not os.path.exists(panel_path):
+        _LOGGER.error("Panel file not found at %s", panel_path)
+        return False
+
     await hass.http.async_register_static_paths([
         StaticPathConfig(PANEL_URL + ".js", panel_path, False)
     ])
 
-    # Register websocket commands
     websocket_api.async_register_command(hass, websocket_get_config)
     websocket_api.async_register_command(hass, websocket_get_states)
     websocket_api.async_register_command(hass, websocket_save_config)
@@ -69,7 +74,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
-    # Register panel
     panel_url = f"combined-notifications-{entry.entry_id}"
     frontend.async_register_built_in_panel(
         hass,
@@ -80,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config={
             "_panel_custom": {
                 "name": "combined-notifications-panel",
-                "js_url": PANEL_URL + f".js?v={int(time.time())}",
+                "js_url": PANEL_URL + f".js?v={VERSION_SLUG}",
                 "embed_iframe": False,
                 "trust_external_script": False,
                 "config": {"entry_id": entry.entry_id},
@@ -125,7 +129,7 @@ async def websocket_get_config(hass, connection, msg):
 
     connection.send_result(msg["id"], {
         "config": dict(entry.data),
-        "states": {}   # ← will be loaded later
+        "states": {}
     })
 
 
