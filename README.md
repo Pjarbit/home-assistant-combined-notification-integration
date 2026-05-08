@@ -507,7 +507,7 @@ This integration is free and will always be free. If you find it useful, skip th
 - The created sensors will be removed automatically
 
 ---
-## Special thanks to David Wallace and Jason Bogart for their hard work and Beta testing
+## Special thanks to David Wallis and Jason Bogart for their hard work and Beta testing
 
 ## 📄 License
 
