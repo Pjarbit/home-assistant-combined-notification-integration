@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 5.5.10
+# Integration version: 5.5.11
 import logging
 import os
 from homeassistant.config_entries import ConfigEntry
@@ -11,7 +11,7 @@ from .const import DOMAIN, COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
-VERSION_SLUG = "5510"
+VERSION_SLUG = "5511"
 PANEL_URL = f"/combined_notifications_panel_{VERSION_SLUG}"
 PANEL_FILENAME = "combined_notifications_panel.js"
 
