@@ -1,80 +1,68 @@
 /**
- * Combined Notifications Panel v5.5.10
- * Style injection fix for UIX / card-mod compatibility
- * + Robust LitElement detection with retry (fixes blank panel on UIX/heavy custom UI)
+ * Combined Notifications Panel v5.5.12
+ * Style injection + force visibility fix for card-mod / UIX compatibility
  */
 
 let LitElement, html, css;
 
-const MAX_RETRIES = 40; // ~2 seconds max
-let retryCount = 0;
+try {
+  if (window.LitElement) {
+    LitElement = window.LitElement;
+  } else if (customElements.get("ha-panel-lovelace")) {
+    LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
+  } else if (customElements.get("hui-view")) {
+    LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
+  } else {
+    LitElement = HTMLElement;
+  }
 
-function detectLitElement() {
-  if (window.LitElement) return window.LitElement;
-  if (customElements.get("ha-panel-lovelace")) {
-    return Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
-  }
-  if (customElements.get("hui-view")) {
-    return Object.getPrototypeOf(customElements.get("hui-view"));
-  }
-  if (customElements.get("ha-card")) {
-    return Object.getPrototypeOf(customElements.get("ha-card"));
-  }
-  return null;
+  html = LitElement.prototype?.html || window.html || ((strings, ...values) => strings.raw.join(''));
+  css  = LitElement.prototype?.css  || window.css  || ((strings, ...values) => strings.raw.join(''));
+
+} catch (e) {
+  console.error("CN Panel: Lit detection failed", e);
+  LitElement = HTMLElement;
+  html = (strings, ...values) => strings.raw.join('');
+  css  = (strings, ...values) => strings.raw.join('');
 }
 
-function attemptDefinePanel() {
-  retryCount++;
+if (typeof html !== "function") html = (strings, ...values) => strings.raw.join('');
+if (typeof css  !== "function") css  = (strings, ...values) => strings.raw.join('');
 
-  try {
-    if (customElements.get("combined-notifications-panel")) {
-      console.log('%cCombined Notifications v5.5.10 → Already registered', 'color:#39FF14; font-weight:bold');
-      return;
-    }
-
-    const detectedLit = detectLitElement();
-
-    if (!detectedLit) {
-      if (retryCount < MAX_RETRIES) {
-        console.log(`%cCN Panel: LitElement not ready yet (attempt ${retryCount}/${MAX_RETRIES}) – retrying in 50ms`, 'color:#ffd701; font-weight:bold');
-        setTimeout(attemptDefinePanel, 50);
-        return;
-      }
-      console.warn('%cCN Panel: LitElement detection failed after max retries – falling back to basic HTMLElement', 'color:#fc8181');
-    } else {
-      console.log('%cCombined Notifications v5.5.10 → LitElement detected successfully', 'color:#39FF14; font-weight:bold');
-    }
-
-    LitElement = detectedLit || HTMLElement;
-
-    html = LitElement.prototype?.html || window.html || ((strings, ...values) => strings.raw.join(''));
-    css  = LitElement.prototype?.css  || window.css  || ((strings, ...values) => strings.raw.join(''));
-
-    console.log('%cCombined Notifications v5.5.10 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
-    definePanel();
-    console.log('%cCombined Notifications v5.5.10 → Successfully registered', 'color:#39FF14; font-weight:bold');
-
-  } catch (e) {
-    console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
-
-    const errorHTML = `
-      <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
-        <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-        <p style="margin:8px 0">Version 5.5.10</p>
-        <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
-        <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', errorHTML);
-  }
+try {
+  console.log('%cCombined Notifications v5.5.12 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  definePanel();
+  console.log('%cCombined Notifications v5.5.12 → Successfully registered', 'color:#39FF14; font-weight:bold');
+} catch (e) {
+  console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
+  const errorHTML = `
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+      <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
+      <p style="margin:8px 0">Version 5.5.12</p>
+      <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
+      <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', errorHTML);
 }
-
-setTimeout(attemptDefinePanel, 0);
 
 function definePanel() {
 
 const CN_STYLES = `
-  :host { display: block; }
+  :host {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 100vh !important;
+    height: auto !important;
+  }
+  .panel-root,
+  .dialog,
+  .loading {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   .panel-root {
     min-height: 100vh;
@@ -982,15 +970,32 @@ class CombinedNotificationsPanel extends LitElement {
     this._injectStyles();
   }
 
+  _forceVisibility() {
+    this.style.setProperty('display', 'block', 'important');
+    this.style.setProperty('visibility', 'visible', 'important');
+    this.style.setProperty('opacity', '1', 'important');
+    this.style.setProperty('min-height', '100vh', 'important');
+  }
+
   connectedCallback() {
     if (super.connectedCallback) super.connectedCallback();
     this._injectStyles();
-    this._maybeLoadConfig();
+    this._forceVisibility();
+
+    Promise.race([
+      customElements.whenDefined("ha-icon-picker"),
+      new Promise(r => setTimeout(r, 1000))
+    ]).then(() => {
+      this._maybeLoadConfig();
+    });
+
+    console.log('%cCN Panel: forced host visibility + icon-picker wait', 'color:#63b3ed');
   }
 
   _maybeLoadConfig() {
     if (this._config || this._loading || !this._hass || !this._entryId) return;
     this._loading = true;
+    console.log('%cCN Panel: Loading config for entry', 'color:#63b3ed', this._entryId);
     this._loadConfig();
   }
 
@@ -1646,7 +1651,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja 5.5.10</span>
+            <span class="version-stamp">pja 5.5.12</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1741,17 +1746,31 @@ class CombinedNotificationsPanel extends LitElement {
           <div class="icon-row">
             <div class="icon-field">
               <label>All Clear Icon</label>
-              <ha-icon-picker
-                .value="${c.icon_all_clear || "mdi:hand-okay"}"
-                @value-changed="${e => this._set("icon_all_clear", e.detail.value)}">
-              </ha-icon-picker>
+              ${customElements.get("ha-icon-picker") ? html`
+                <ha-icon-picker
+                  .value="${c.icon_all_clear || "mdi:hand-okay"}"
+                  @value-changed="${e => this._set("icon_all_clear", e.detail.value)}">
+                </ha-icon-picker>
+              ` : html`
+                <input type="text" .value="${c.icon_all_clear || "mdi:hand-okay"}"
+                  placeholder="mdi:hand-okay"
+                  @input="${e => this._set("icon_all_clear", e.target.value)}">
+                <div class="hint">mdi:hand-okay, mdi:shield-check, etc.</div>
+              `}
             </div>
             <div class="icon-field">
               <label>Alert Icon</label>
-              <ha-icon-picker
-                .value="${c.icon_alert || "mdi:alert-circle"}"
-                @value-changed="${e => this._set("icon_alert", e.detail.value)}">
-              </ha-icon-picker>
+              ${customElements.get("ha-icon-picker") ? html`
+                <ha-icon-picker
+                  .value="${c.icon_alert || "mdi:alert-circle"}"
+                  @value-changed="${e => this._set("icon_alert", e.detail.value)}">
+                </ha-icon-picker>
+              ` : html`
+                <input type="text" .value="${c.icon_alert || "mdi:alert-circle"}"
+                  placeholder="mdi:alert-circle"
+                  @input="${e => this._set("icon_alert", e.target.value)}">
+                <div class="hint">mdi:alert, mdi:exclamation-thick, etc.</div>
+              `}
             </div>
           </div>
         </div>
