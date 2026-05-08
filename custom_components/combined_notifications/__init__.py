@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 5.5.12
+# Integration version: 5.5.14
 import logging
 import os
 from homeassistant.config_entries import ConfigEntry
@@ -11,7 +11,7 @@ from .const import DOMAIN, COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
-VERSION_SLUG = "5512"
+VERSION_SLUG = "5514"
 PANEL_URL = f"/combined_notifications_panel_{VERSION_SLUG}"
 PANEL_FILENAME = "combined_notifications_panel.js"
 
@@ -62,16 +62,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         StaticPathConfig(PANEL_URL + ".js", panel_path, False)
     ])
 
-    websocket_api.async_register_command(hass, websocket_get_config)
-    websocket_api.async_register_command(hass, websocket_get_states)
-    websocket_api.async_register_command(hass, websocket_save_config)
-
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Combined Notifications from a config entry."""
     hass.data.setdefault(DOMAIN, {})
+
+    # Register websocket commands per entry — guarantees they exist before panel loads
+    websocket_api.async_register_command(hass, websocket_get_config)
+    websocket_api.async_register_command(hass, websocket_get_states)
+    websocket_api.async_register_command(hass, websocket_save_config)
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
