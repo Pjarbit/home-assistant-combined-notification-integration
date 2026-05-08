@@ -4,6 +4,9 @@
 
 [![Demo](media/demo.gif)](media/demo.gif)
 
+> ⚠️ **Known Issue — Blank Configuration Panel**
+> Some users may experience a blank screen when opening the configuration panel. If you are currently using Combined Notifications and it is working, this does not affect you. This issue affects some new installations, particularly those using card-mod. We are actively working on a fix.
+
 **Monitor and group multiple entity conditions — all on ONE CARD. No YAML editing required.**
 
 Hundreds of conditions can be monitored with no slowdown or lagging in your frontend dashboard.
@@ -361,12 +364,12 @@ hold_action:
 
 ---
 
-### 3. Advanced — Card with Integration Colors with card-mod(uix) and advanced styling.
+### 3. Advanced — Card with Integration Colors with card-mod (uix) and advanced styling
 
 ![All Clear](media/card_all_clear.png)
 ![Alert](media/card_alert.png)
 
-This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod).(uix) The card is coded with card-mod for backward compatability. The card-mod section adds a light reflection effect for a polished appearance.
+This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod) (uix). The card is coded with card-mod for backward compatibility. The card-mod section adds a light reflection effect for a polished appearance.
 
 Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor. Paste into a Manual card in your dashboard.
 
@@ -445,7 +448,6 @@ card_mod:
       left: -20px !important;
       z-index: 1 !important;
     }
-
 ```
 
 ---
@@ -507,7 +509,10 @@ This integration is free and will always be free. If you find it useful, skip th
 - The created sensors will be removed automatically
 
 ---
-## Special thanks to David Wallis and Jason Bogart for their hard work and Beta testing
+
+*Special thanks to David Wallis and Jason Bogart for their hard work and beta testing.*
+
+---
 
 ## 📄 License
 
