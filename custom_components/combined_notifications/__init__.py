@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 5.5.11
+# Integration version: 5.5.12
 import logging
 import os
 from homeassistant.config_entries import ConfigEntry
@@ -11,7 +11,7 @@ from .const import DOMAIN, COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
-VERSION_SLUG = "5511"
+VERSION_SLUG = "5512"
 PANEL_URL = f"/combined_notifications_panel_{VERSION_SLUG}"
 PANEL_FILENAME = "combined_notifications_panel.js"
 
@@ -25,10 +25,11 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         conditions = data.get("conditions", [])
 
         for condition in conditions:
-            if "paused" in condition:
-                condition["disabled"] = condition.pop("paused")
-            if "disabled" not in condition:
-                condition["disabled"] = False
+            if "disabled" in condition and "paused" not in condition:
+                condition["paused"] = condition.pop("disabled")
+            elif "paused" not in condition:
+                condition["paused"] = False
+
             if "name" not in condition:
                 if "entity_id" in condition:
                     condition["name"] = condition["entity_id"]
@@ -146,6 +147,14 @@ async def websocket_get_states(hass, connection, msg):
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
 
+    RELEVANT_DOMAINS = {
+        "sensor", "binary_sensor", "input_boolean", "switch", "light", "lock",
+        "cover", "climate", "person", "device_tracker", "media_player",
+        "camera", "automation", "script", "scene", "button", "update",
+        "number", "select", "input_number", "input_select", "input_text",
+        "counter", "timer", "input_datetime", "valve",
+    }
+
     states = {
         state.entity_id: {
             "state": state.state,
@@ -153,6 +162,7 @@ async def websocket_get_states(hass, connection, msg):
             "friendly_name": state.attributes.get("friendly_name", state.entity_id),
         }
         for state in hass.states.async_all()
+        if state.domain in RELEVANT_DOMAINS
     }
 
     connection.send_result(msg["id"], {"states": states})
