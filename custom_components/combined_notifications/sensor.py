@@ -262,13 +262,6 @@ class CombinedNotificationSensor(Entity):
             )
             self._unsubscribe_callbacks.append(unsub)
 
-        # Smart groups: listen to all state changes so entity_filter conditions update live
-        if any("entity_filter" in c for c in self._conditions):
-            unsub = async_track_state_change_event(
-                self._hass, "*", self._state_change_listener
-            )
-            self._unsubscribe_callbacks.append(unsub)
-
     def _unsubscribe_all(self) -> None:
         for unsub in self._unsubscribe_callbacks:
             unsub()
