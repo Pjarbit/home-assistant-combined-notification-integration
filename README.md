@@ -4,9 +4,6 @@
 
 [![Demo](media/demo.gif)](media/demo.gif)
 
-> ⚠️ **Known Issue — Blank Configuration Panel**
-> Some users may experience a blank screen when opening the configuration panel. If you are currently using Combined Notifications and it is working, this does not affect you. This issue affects some new installations, particularly those using card-mod. We are actively working on a fix.
-
 **Monitor and group multiple entity conditions — all on ONE CARD. No YAML editing required.**
 
 Hundreds of conditions can be monitored with no slowdown or lagging in your frontend dashboard.
@@ -18,6 +15,8 @@ Combined Notifications monitors the entities you choose and alerts you when some
 - Battery critical: **Back Door Sensor 12%** — count: 1
 
 No entity IDs. Just the **custom names you** gave your devices. All on **one card**.
+
+*⚠️ Card-mod users — see below.*
 
 ---
 
@@ -42,6 +41,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 - [Alert Ticker Card Pairing](#-alert-ticker-card-pairing)
 - [Combined Notifications vs Alert Ticker](#-combined-notifications-vs-alert-ticker)
 - [A Note from the Developer](#-a-note-from-the-developer)
+- [Card-Mod Compatibility — Blank Screen Conflict](#card-mod-compatibility--blank-screen-conflict)
 - [Removal](#-removal)
 - [License](#-license)
 
@@ -507,6 +507,18 @@ This integration is free and will always be free. If you find it useful, skip th
 - Go to **Settings → Devices & Services**
 - Find **Combined Notifications** and click **Delete**
 - The created sensors will be removed automatically
+
+---
+
+## Card-Mod Compatibility — Blank Screen Conflict
+
+Combined Notifications may work with card-mod installed, it may not. Some users will experience a blank screen when opening the configuration panel. Combined Notifications may not be compatible with card-mod's older deprecated code on your system. Card-mod does not play well with current Home Assistant LitElements (design features) that were brought into HA as recent coding protocols.
+
+This is a known conflict between newer integrations and card-mod. Card-mod has been updated to a new integration called UIX to fix issues with newer integrations.
+
+**If you are having a blank screen issue, you will need to update card-mod to UIX.**
+
+It is a drop-in replacement and no additional coding or changes in your system should be necessary as it reads card-mod styles and custom:card-mod cards without changes. When you remove card-mod, you will also need to completely remove any card-mod resource lines from your configuration.yaml if you have them.
 
 ---
 
