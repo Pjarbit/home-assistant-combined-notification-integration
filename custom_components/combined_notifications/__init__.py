@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 5.6.0
+# Integration version: 5.6.2
 import logging
 import os
 from homeassistant.config_entries import ConfigEntry
@@ -11,8 +11,9 @@ from .const import DOMAIN, COLOR_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
-VERSION_SLUG = "560"
-PANEL_URL = f"/combined_notifications_panel_{VERSION_SLUG}"
+import time
+PANEL_TIMESTAMP = int(time.time())
+PANEL_URL = "/combined_notifications_panel"
 PANEL_FILENAME = "combined_notifications_panel.js"
 
 
@@ -86,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config={
             "_panel_custom": {
                 "name": "combined-notifications-panel",
-                "js_url": PANEL_URL + f".js?v={VERSION_SLUG}",
+                "js_url": PANEL_URL + f".js?v={PANEL_TIMESTAMP}",
                 "embed_iframe": False,
                 "trust_external_script": False,
                 "config": {"entry_id": entry.entry_id},
