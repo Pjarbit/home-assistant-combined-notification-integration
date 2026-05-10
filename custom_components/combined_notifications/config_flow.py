@@ -18,7 +18,6 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             name = user_input["name"].strip().lower().replace(" ", "_")
-            # Strip any non-alphanumeric/underscore characters
             name = "".join(c for c in name if c.isalnum() or c == "_")
 
             if not name:
@@ -28,8 +27,9 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 for entry in self._async_current_entries()
             ):
                 errors["name"] = "already_configured"
+            elif self.hass.states.get(f"sensor.{name}") is not None:
+                errors["name"] = "entity_already_exists"
             else:
-                # Create entry with defaults — user configures everything else in the panel
                 return self.async_create_entry(
                     title=user_input.get("friendly_sensor_name") or name,
                     data={
