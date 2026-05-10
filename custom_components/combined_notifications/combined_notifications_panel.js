@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.6.0
+ * Combined Notifications Panel v5.6.2
  * Style injection + force visibility fix for card-mod / UIX compatibility
  */
 
@@ -30,9 +30,9 @@ if (typeof html !== "function") html = (strings, ...values) => strings.raw.join(
 if (typeof css  !== "function") css  = (strings, ...values) => strings.raw.join('');
 
 try {
-  console.log('%cCombined Notifications v5.6.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v5.6.2 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v5.6.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v5.6.2 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
@@ -920,6 +920,7 @@ class CombinedNotificationsPanel extends LitElement {
       _totalPaused: { type: Number },
       _entitySearch: { type: Object },
       _backupMsg:    { type: String },
+      _individualDomainFilter: { type: Object },
     };
   }
 
@@ -935,8 +936,17 @@ class CombinedNotificationsPanel extends LitElement {
     this._expandedConditions = new Set();
     this._entitySearch = {};
     this._backupMsg = "";
+    this._showRenameWarning = false;
+    this._renaming = false;
+    this._originalName = "";
     this._allEntityList = [];
     this._debounceTimer = null;
+    this._individualDomainFilter = new Set();
+  }
+
+  get _isExistingSensor() {
+  const entityId = `sensor.${this._config?.name || ""}`;
+  return !!this._hass?.states?.[entityId];
   }
 
   set hass(hass) {
@@ -1018,6 +1028,7 @@ class CombinedNotificationsPanel extends LitElement {
       console.log('%cCN Panel: Config loaded successfully', 'color:#39FF14');
 
       this._config = { ...result.config };
+      this._originalName = result.config.name || ""
       this._states = result.states || {};
 
       if (!this._config.conditions) this._config.conditions = [];
@@ -1658,7 +1669,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja 5.6.0</span>
+            <span class="version-stamp">pja v5.6.2</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1724,15 +1735,40 @@ class CombinedNotificationsPanel extends LitElement {
         <div class="group-body">
           <div class="field">
             <label>Your Sensor Name <span class="required">*</span></label>
-            <input type="text" .value="${c.name || ""}"
-              placeholder="e.g. combined_notifications_1"
-              @input="${e => {
-                const clean = this._sanitizeName(e.target.value);
-                e.target.value = clean;
-                this._set("name", clean);
-              }}">
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" .value="${c.name || ""}"
+                ?disabled="${this._isExistingSensor && !this._renaming}"
+                style="${this._isExistingSensor && !this._renaming ? 'opacity:0.5;cursor:not-allowed;flex:1' : 'flex:1'}"
+                placeholder="e.g. combined_notifications_1"
+                @input="${e => {
+                  const clean = this._sanitizeName(e.target.value);
+                  e.target.value = clean;
+                  this._set("name", clean);
+                }}">
+              ${this._isExistingSensor && !this._renaming ? html`
+                <button class="backup-btn export-btn" style="white-space:nowrap" @click="${() => { this._showRenameWarning = true; this.requestUpdate(); }}">✎ Rename</button>
+              ` : ""}
+            </div>
             <div class="hint"><em>Your sensor will be created as: <span class="mono accent">${"sensor." + (c.name || "")}</span></em></div>
           </div>
+
+          ${this._showRenameWarning ? html`
+            <div style="background:rgba(246,173,85,0.08);border:1px solid rgba(246,173,85,0.4);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:0.95rem;font-weight:700;color:#f6ad55">⚠ Rename this sensor?</div>
+              <div style="font-size:0.85rem;color:#94a3b8;line-height:1.6">
+                Renaming will change the entity ID from <span class="mono" style="color:#e2e8f0">sensor.${this._originalName}</span> to a new name. Before renaming, update any references in:
+                <ul style="margin:8px 0 8px 16px;padding:0;line-height:1.8">
+                  <li>Dashboard cards</li>
+                  <li>Automations &amp; scripts</li>
+                </ul>
+                After saving, go to <strong style="color:#e2e8f0">Settings → Devices &amp; Services → Combined Notifications</strong>, find this device, click the pencil icon, and update the entity ID to match. Then reload the integration from the same page using the three-dot menu → Reload.
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button class="btn-cancel" @click="${() => { this._showRenameWarning = false; this.requestUpdate(); }}">Cancel</button>
+                <button class="backup-btn" style="background:rgba(246,173,85,0.2);border:1px solid rgba(246,173,85,0.5);color:#f6ad55" @click="${() => { this._showRenameWarning = false; this._renaming = true; this.requestUpdate(); }}">I understand, rename it</button>
+              </div>
+            </div>
+          ` : ""}
           <div class="field">
             <label>Friendly Display Name</label>
             <input type="text" .value="${c.friendly_sensor_name || ""}"
@@ -1856,7 +1892,13 @@ class CombinedNotificationsPanel extends LitElement {
 
   _renderIndividual() {
     const conditions = this._config.conditions || [];
-    const individual = conditions.map((c, i) => ({ c, i })).filter(({ c }) => !("entity_filter" in c));
+    const individual = conditions.map((c, i) => ({ c, i }))
+      .filter(({ c }) => !("entity_filter" in c))
+      .sort((a, b) => {
+        const nameA = (a.c.name || a.c.entity_id || "").toLowerCase();
+        const nameB = (b.c.name || b.c.entity_id || "").toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
 
     return html`
       <div class="group-card">
@@ -1870,11 +1912,11 @@ class CombinedNotificationsPanel extends LitElement {
           <div class="hint" style="font-style:italic">
             Monitor a specific entity one at a time. Each condition watches a single device and alerts when it matches your defined value.
           </div>
-          ${individual.length === 0 ? html`<div class="empty-hint">No individual conditions yet. Add one below.</div>` : ""}
-          ${individual.map(({ c, i }) => this._renderConditionCard(c, i))}
           <button class="add-btn" @click="${() => { this._addCondition(false); this._activeTab = "individual"; }}">
             <span class="plus">+</span> Add Individual Monitored Device / Entity
           </button>
+          ${individual.length === 0 ? html`<div class="empty-hint">No individual conditions yet. Add one below.</div>` : ""}
+          ${individual.map(({ c, i }) => this._renderConditionCard(c, i))}
         </div>
       </div>
     `;
@@ -2086,7 +2128,12 @@ class CombinedNotificationsPanel extends LitElement {
             ` : ""}
 
             ${condition.entity_filter ? html`
-              <div class="entity-list">
+              <div class="entity-list" style="${isPaused ? 'opacity:0.4;pointer-events:none;' : ''}">
+                ${isPaused ? html`
+                  <div style="padding:6px 12px;background:rgba(246,173,85,0.1);border-bottom:1px solid rgba(246,173,85,0.2);font-size:0.78rem;color:#f6ad55;font-family:monospace;">
+                    ⏸ Group is paused — entities are not being monitored
+                  </div>
+                ` : ""}
                 <div class="entity-list-header">
                   <span class="entity-list-title">Matching entities in your system</span>
                   <div style="display:flex;align-items:center;gap:8px">
