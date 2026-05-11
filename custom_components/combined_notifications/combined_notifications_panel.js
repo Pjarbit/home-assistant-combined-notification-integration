@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.6.2
+ * Combined Notifications Panel v5.6.4
  * Style injection + force visibility fix for card-mod / UIX compatibility
  */
 
@@ -30,15 +30,15 @@ if (typeof html !== "function") html = (strings, ...values) => strings.raw.join(
 if (typeof css  !== "function") css  = (strings, ...values) => strings.raw.join('');
 
 try {
-  console.log('%cCombined Notifications v5.6.2 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v5.6.4 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v5.6.2 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v5.6.4 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 5.6.0</p>
+      <p style="margin:8px 0">Version 5.6.4</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -1669,7 +1669,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v5.6.2</span>
+            <span class="version-stamp">pja v5.6.4</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
