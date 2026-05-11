@@ -5,7 +5,8 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import Entity, EntityCategory
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_call_later
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import logging
@@ -89,6 +90,8 @@ class CombinedNotificationSensor(Entity):
         self._unmet = []
         self._unsubscribe_callbacks = []
         self._debounced_update_task = None
+        self._startup_unsub = None
+        self._safety_net_unsub = None
 
         self._attr_has_entity_name = False
         self._attr_should_poll = False
@@ -266,11 +269,29 @@ class CombinedNotificationSensor(Entity):
         """Set up listeners when added to HA."""
         await self._subscribe_listeners()
 
+        async def _resubscribe(_now=None) -> None:
+            """Resubscribe and re-evaluate — catches late-loading integrations."""
+            await self._subscribe_listeners()
+            await self.async_update()
+            self.async_write_ha_state()
+
+        # Fire once when HA is fully started — catches most slow integrations
+        self._startup_unsub = self._hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STARTED, _resubscribe
+        )
+
+        # Safety net for very slow cloud integrations (Mercedes, etc.)
+        self._safety_net_unsub = async_call_later(self._hass, 60, _resubscribe)
+
     async def async_will_remove_from_hass(self) -> None:
         """Clean up listeners."""
         self._unsubscribe_all()
         if self._debounced_update_task:
             self._debounced_update_task.cancel()
+        if self._startup_unsub:
+            self._startup_unsub()
+        if self._safety_net_unsub:
+            self._safety_net_unsub()
 
     async def _subscribe_listeners(self) -> None:
         """
