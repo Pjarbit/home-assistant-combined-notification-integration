@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 5.6.4
+# Integration version: 5.6.6
 import logging
 import os
 from homeassistant.config_entries import ConfigEntry
