@@ -375,7 +375,7 @@ Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your se
 
 ```yaml
 type: custom:button-card
-entity: sensor.home_conditions
+entity: sensor.YOUR_SENSOR_NAME
 name: NOTIFICATIONS
 show_name: true
 show_icon: true
