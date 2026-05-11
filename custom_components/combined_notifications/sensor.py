@@ -105,7 +105,6 @@ class CombinedNotificationSensor(Entity):
             if c.get("disabled", False) or c.get("paused", False):
                 continue
             if "entity_filter" in c:
-                # Smart group — always valid, expanded at runtime
                 valid.append(c)
             elif all(k in c for k in ("entity_id", "operator", "trigger_value")):
                 valid.append(c)
@@ -124,7 +123,6 @@ class CombinedNotificationSensor(Entity):
         expanded = []
         for condition in self._conditions:
             if "entity_filter" not in condition:
-                # Regular individual condition
                 expanded.append(condition)
                 continue
 
@@ -157,6 +155,43 @@ class CombinedNotificationSensor(Entity):
                     })
 
         return expanded
+
+    def _get_all_monitored_entity_ids(self) -> set[str]:
+        """
+        Return the full set of entity IDs that should be monitored.
+        For individual conditions: direct entity_id.
+        For smart groups: expand by keyword and exclude list right now,
+        same logic as _expand_conditions but just collecting IDs.
+        This is used to build specific listeners — no wildcards.
+        """
+        entity_ids = set()
+
+        for c in self._conditions:
+            # AND conditions always tracked specifically
+            for and_cond in c.get("and_conditions", []):
+                if and_cond.get("entity_id"):
+                    entity_ids.add(and_cond["entity_id"])
+
+            if "entity_filter" not in c:
+                # Individual condition
+                if c.get("entity_id"):
+                    entity_ids.add(c["entity_id"])
+                continue
+
+            # Smart group — expand right now
+            keyword = c["entity_filter"].lower()
+            if not keyword:
+                continue
+            excluded = set(c.get("entity_filter_exclude", []))
+            for state_obj in self._hass.states.async_all():
+                eid = state_obj.entity_id
+                if eid in excluded:
+                    continue
+                friendly_name = state_obj.attributes.get("friendly_name", eid)
+                if keyword in eid.lower() or keyword in friendly_name.lower():
+                    entity_ids.add(eid)
+
+        return entity_ids
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -238,28 +273,19 @@ class CombinedNotificationSensor(Entity):
             self._debounced_update_task.cancel()
 
     async def _subscribe_listeners(self) -> None:
-        """Subscribe state change listeners for all tracked entities."""
+        """
+        Subscribe state change listeners for all tracked entities.
+        Smart groups are expanded to specific entity IDs right now —
+        no wildcards. Reliable, efficient, same method as individual conditions.
+        A save from the panel re-runs this, picking up any new devices.
+        """
         self._unsubscribe_all()
-        # For individual conditions track directly
-        entity_ids = set()
-        for c in self._conditions:
-            if "entity_id" in c:
-                entity_ids.add(c["entity_id"])
-            # AND conditions
-            for and_cond in c.get("and_conditions", []):
-                if "entity_id" in and_cond:
-                    entity_ids.add(and_cond["entity_id"])
 
-        for entity_id in entity_ids:
-            unsub = async_track_state_change_event(
-                self._hass, [entity_id], self._state_change_listener
-            )
-            self._unsubscribe_callbacks.append(unsub)
+        entity_ids = self._get_all_monitored_entity_ids()
 
-        # Smart groups: listen to all state changes so entity_filter conditions update live
-        if any("entity_filter" in c for c in self._conditions):
+        if entity_ids:
             unsub = async_track_state_change_event(
-                self._hass, "*", self._state_change_listener
+                self._hass, list(entity_ids), self._state_change_listener
             )
             self._unsubscribe_callbacks.append(unsub)
 
@@ -274,7 +300,6 @@ class CombinedNotificationSensor(Entity):
         """Evaluate all conditions and update sensor state."""
         self._unmet = []
 
-        # Expand smart groups at runtime
         expanded = self._expand_conditions()
 
         for condition in expanded:
@@ -286,7 +311,6 @@ class CombinedNotificationSensor(Entity):
             if state_obj is None or state_obj.state in ("unknown", "unavailable"):
                 continue
 
-            # Use attribute if specified, otherwise entity state
             attribute = condition.get("attribute", "")
             if attribute:
                 actual = str(state_obj.attributes.get(attribute, ""))
@@ -300,11 +324,9 @@ class CombinedNotificationSensor(Entity):
                 state_obj2 = self._hass.states.get(entity_id)
                 label = state_obj2.attributes.get("friendly_name", entity_id) if state_obj2 else entity_id
 
-            # Check main condition
             if not self._evaluate(actual, trigger_value, operator):
                 continue
 
-            # Check AND conditions — all must be true for alert to fire
             and_conditions = condition.get("and_conditions", [])
             if and_conditions:
                 and_passed = True
@@ -360,13 +382,11 @@ class CombinedNotificationSensor(Entity):
 
     def _evaluate(self, actual: str, expected: str, operator: str) -> bool:
         """Evaluate a single condition."""
-        # Fix v4 format where operator symbol was baked into trigger_value
         for sym in (">=", "<=", "!=", ">", "<", "==", "="):
             if isinstance(expected, str) and expected.startswith(sym):
                 operator = sym
                 expected = expected[len(sym):].strip()
                 break
-        # Convert friendly labels to symbols if needed
         label_map = {
             "equals": "==",
             "not equal to": "!=",
@@ -379,7 +399,6 @@ class CombinedNotificationSensor(Entity):
                 return str(actual) == str(expected)
             if operator == "!=":
                 return str(actual) != str(expected)
-            # Numeric comparisons
             a, e = float(actual), float(expected)
             if operator == ">":  return a > e
             if operator == "<":  return a < e
