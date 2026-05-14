@@ -1,20 +1,16 @@
 """Combined Notifications integration."""
-# Integration version: 5.6.6
+# Integration version: 6.0.0
 import logging
-import os
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.components import frontend, websocket_api
-from homeassistant.components.http import StaticPathConfig
 import voluptuous as vol
 from .const import DOMAIN, COLOR_MAP
+from .panel_api import async_register_views
 
 _LOGGER = logging.getLogger(__name__)
 
-import time
-PANEL_TIMESTAMP = int(time.time())
-PANEL_URL = "/combined_notifications_panel"
-PANEL_FILENAME = "combined_notifications_panel.js"
+VERSION_SLUG = "600"
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -51,24 +47,17 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Combined Notifications component."""
     hass.data.setdefault(DOMAIN, {})
-
-    panel_path = os.path.join(os.path.dirname(__file__), PANEL_FILENAME)
-    _LOGGER.info("Registering CN panel from: %s", panel_path)
-
-    if not os.path.exists(panel_path):
-        _LOGGER.error("Panel file not found at %s", panel_path)
-        return False
-
-    await hass.http.async_register_static_paths([
-        StaticPathConfig(PANEL_URL + ".js", panel_path, False)
-    ])
-
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Combined Notifications from a config entry."""
     hass.data.setdefault(DOMAIN, {})
+
+    # Register REST API views (idempotent)
+    if not hass.data[DOMAIN].get("_views_registered"):
+        async_register_views(hass)
+        hass.data[DOMAIN]["_views_registered"] = True
 
     # Register websocket commands per entry — guarantees they exist before panel loads
     websocket_api.async_register_command(hass, websocket_get_config)
@@ -78,21 +67,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
     panel_url = f"combined-notifications-{entry.entry_id}"
+    # Remove stale panel before re-registering
+    try:
+        frontend.async_remove_panel(hass, panel_url)
+    except Exception:
+        pass
     frontend.async_register_built_in_panel(
         hass,
-        component_name="custom",
+        component_name="iframe",
         sidebar_title=None,
         sidebar_icon=None,
         frontend_url_path=panel_url,
-        config={
-            "_panel_custom": {
-                "name": "combined-notifications-panel",
-                "js_url": PANEL_URL + f".js?v={PANEL_TIMESTAMP}",
-                "embed_iframe": False,
-                "trust_external_script": False,
-                "config": {"entry_id": entry.entry_id},
-            }
-        },
+        config={"url": f"/api/combined_notifications/panel?entry_id={entry.entry_id}&v={VERSION_SLUG}"},
         require_admin=True,
     )
 
