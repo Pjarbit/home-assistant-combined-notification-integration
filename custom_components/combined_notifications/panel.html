@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Combined Notifications</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #080a0f;
+      height: 100%;
+      overflow-x: hidden;
+    }
+  </style>
+</head>
+<body>
+  <combined-notifications-panel id="cn-panel"></combined-notifications-panel>
+  <script>
+    // Get entry_id and auth token from URL params
+    const params = new URLSearchParams(window.location.search);
+    const entryId = params.get("entry_id");
+    const hassUrl = params.get("hass_url") || "";
+
+    // Wait for element to be defined then initialize
+    customElements.whenDefined("combined-notifications-panel").then(() => {
+      const panel = document.getElementById("cn-panel");
+      if (panel) {
+        panel.entryId = entryId;
+        panel.hassUrl = hassUrl;
+      }
+    });
+  </script>
+  <script src="/api/combined_notifications/panel.js?v=600"></script>
+</body>
+</html>
