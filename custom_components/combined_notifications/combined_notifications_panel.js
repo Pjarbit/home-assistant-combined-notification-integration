@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v5.6.6
+ * Combined Notifications Panel v6.0.0
  * Style injection + force visibility fix for card-mod / UIX compatibility
  */
 
@@ -30,15 +30,15 @@ if (typeof html !== "function") html = (strings, ...values) => strings.raw.join(
 if (typeof css  !== "function") css  = (strings, ...values) => strings.raw.join('');
 
 try {
-  console.log('%cCombined Notifications v5.6.6 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v6.0.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v5.6.6 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v6.0.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 5.6.6</p>
+      <p style="margin:8px 0">Version 6.0.0</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -921,6 +921,9 @@ class CombinedNotificationsPanel extends LitElement {
       _entitySearch: { type: Object },
       _backupMsg:    { type: String },
       _individualDomainFilter: { type: Object },
+      entryId:     { type: String },
+      hassUrl:     { type: String },
+      _lastUpdated: { type: Number },
     };
   }
 
@@ -932,35 +935,20 @@ class CombinedNotificationsPanel extends LitElement {
     this._saving = false;
     this._saved = false;
     this._error = "";
-    this._loading = false;
     this._expandedConditions = new Set();
     this._entitySearch = {};
     this._backupMsg = "";
-    this._showRenameWarning = false;
-    this._renaming = false;
-    this._originalName = "";
     this._allEntityList = [];
     this._debounceTimer = null;
     this._individualDomainFilter = new Set();
-  }
-
-  get _isExistingSensor() {
-  const entityId = `sensor.${this._config?.name || ""}`;
-  return !!this._hass?.states?.[entityId];
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._maybeLoadConfig();
-  }
-
-  get hass() {
-    return this._hass;
+    this._pollTimer = null;
+    this._statesLoading = false;
+    this._lastUpdated = null;
+    this._loading = false;
   }
 
   set panel(panel) {
     this._panel = panel;
-    this._maybeLoadConfig();
   }
 
   get panel() {
@@ -987,6 +975,35 @@ class CombinedNotificationsPanel extends LitElement {
     this.style.setProperty('min-height', '100vh', 'important');
   }
 
+  _getToken() {
+    // Get auth token from HA's local storage
+    try {
+      const tokens = JSON.parse(localStorage.getItem("hassTokens") || "{}");
+      return tokens.access_token || "";
+    } catch (e) {
+      console.warn("CN Panel: Token retrieval failed", e);
+      return "";
+    }
+  }
+
+  _startPolling() {
+    this._stopPolling();
+    this._pollTimer = setInterval(async () => {
+      if (this._config && document.visibilityState === "visible") {
+        await this._loadStates();
+      }
+    }, 15000);
+  }
+
+  _stopPolling() {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
+    this._statesLoading = false;
+    this._loading = false;
+  }
+
   connectedCallback() {
     if (super.connectedCallback) super.connectedCallback();
     this._injectStyles();
@@ -998,38 +1015,41 @@ class CombinedNotificationsPanel extends LitElement {
         new Promise(r => setTimeout(r, 1000))
       ]).then(() => {
         this._maybeLoadConfig();
+        this._startPolling();
       });
     });
 
     console.log('%cCN Panel: deferred init via requestAnimationFrame', 'color:#63b3ed');
   }
 
+  disconnectedCallback() {
+    if (super.disconnectedCallback) super.disconnectedCallback();
+    this._stopPolling();
+  }
+
   _maybeLoadConfig() {
-    if (this._config || this._loading || !this._hass || !this._entryId) return;
+    if (this._config || this._loading || !this._entryId) return;
     this._loading = true;
     console.log('%cCN Panel: Loading config for entry', 'color:#63b3ed', this._entryId);
     this._loadConfig();
   }
 
   get _entryId() {
-    return this.panel?.config?._panel_custom?.config?.entry_id || "";
+    return this.entryId || this.panel?.config?._panel_custom?.config?.entry_id || 
+           new URLSearchParams(window.location.search).get("entry_id") || "";
   }
 
   async _loadConfig() {
     try {
-      console.log('%cCN Panel: Sending get_config WS call', 'color:#63b3ed', this._entryId);
-      const result = await Promise.race([
-        this.hass.callWS({
-          type: "combined_notifications/get_config",
-          entry_id: this._entryId,
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("WebSocket timeout after 8s")), 8000))
-      ]);
+      console.log('%cCN Panel: Loading config via REST', 'color:#63b3ed', this._entryId);
+      const resp = await fetch(`/api/combined_notifications/config?entry_id=${this._entryId}`, {
+        headers: { "Authorization": `Bearer ${this._getToken()}` }
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const result = await resp.json();
       console.log('%cCN Panel: Config loaded successfully', 'color:#39FF14');
 
       this._config = { ...result.config };
-      this._originalName = result.config.name || ""
-      this._states = result.states || {};
 
       if (!this._config.conditions) this._config.conditions = [];
       this._totalPaused = this._config.conditions.filter(c => c.paused).length;
@@ -1053,12 +1073,14 @@ class CombinedNotificationsPanel extends LitElement {
   }
 
   async _loadStates() {
-    await new Promise(r => setTimeout(r, 50));
+    if (this._statesLoading) return;
+    this._statesLoading = true;
     try {
-      const result = await this.hass.callWS({
-        type: "combined_notifications/get_states",
-        entry_id: this._entryId,
+      const resp = await fetch(`/api/combined_notifications/states`, {
+        headers: { "Authorization": `Bearer ${this._getToken()}` }
       });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const result = await resp.json();
 
       this._states = result.states || {};
 
@@ -1082,6 +1104,8 @@ class CombinedNotificationsPanel extends LitElement {
       this._states = {};
       this._allEntityList = [];
     }
+    this._statesLoading = false;
+    this._lastUpdated = Date.now();
     this.requestUpdate();
   }
 
@@ -1098,11 +1122,15 @@ class CombinedNotificationsPanel extends LitElement {
           operator: OPERATOR_LABEL_TO_SYMBOL[ac.operator] || ac.operator,
         })),
       }));
-      await this.hass.callWS({
-        type: "combined_notifications/save_config",
-        entry_id: this._entryId,
-        data: { ...this._config, conditions },
+      const resp = await fetch(`/api/combined_notifications/config?entry_id=${this._entryId}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this._getToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...this._config, conditions }),
       });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       this._saved = true;
     } catch (e) {
       this._error = `Failed to save: ${e.message}`;
@@ -1585,12 +1613,12 @@ class CombinedNotificationsPanel extends LitElement {
   }
 
   _currentState(entityId) {
-    return this._hass?.states?.[entityId]?.state || this._states[entityId]?.state || "";
+    return this._states[entityId]?.state || "";
   }
 
   _renderHeaderStatus() {
     const entityId = `sensor.${(this._config?.name || "").toLowerCase().replace(/\s+/g, "_")}`;
-    const stateObj = this._hass?.states?.[entityId] || this._states?.[entityId];
+    const stateObj = this._states?.[entityId];
     if (!stateObj) return html``;
     const isClear = stateObj.attributes?.is_clear !== false;
     const numUnmet = stateObj.attributes?.number_unmet || 0;
@@ -1626,6 +1654,10 @@ class CombinedNotificationsPanel extends LitElement {
             <div class="header-right">
               <span class="sensor-name">sensor.${this._config.name || ""}</span>
               ${this._renderHeaderStatus()}
+              <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                ${this._lastUpdated ? html`<span style="font-size:0.62rem;color:#64748b;font-family:monospace;">updated ${Math.round((Date.now()-this._lastUpdated)/1000)}s ago</span>` : ""}
+                <button @click="${async () => { this._statesLoading = true; this.requestUpdate(); await this._loadStates(); }}" style="font-size:0.7rem;padding:2px 8px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#94a3b8;cursor:pointer;">${this._statesLoading ? "..." : "↻"}</button>
+              </div>
             </div>
           </div>
 
@@ -1669,7 +1701,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v5.6.6</span>
+            <span class="version-stamp">pja 6.0.0</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1735,40 +1767,15 @@ class CombinedNotificationsPanel extends LitElement {
         <div class="group-body">
           <div class="field">
             <label>Your Sensor Name <span class="required">*</span></label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="text" .value="${c.name || ""}"
-                ?disabled="${this._isExistingSensor && !this._renaming}"
-                style="${this._isExistingSensor && !this._renaming ? 'opacity:0.5;cursor:not-allowed;flex:1' : 'flex:1'}"
-                placeholder="e.g. combined_notifications_1"
-                @input="${e => {
-                  const clean = this._sanitizeName(e.target.value);
-                  e.target.value = clean;
-                  this._set("name", clean);
-                }}">
-              ${this._isExistingSensor && !this._renaming ? html`
-                <button class="backup-btn export-btn" style="white-space:nowrap" @click="${() => { this._showRenameWarning = true; this.requestUpdate(); }}">✎ Rename</button>
-              ` : ""}
-            </div>
+            <input type="text" .value="${c.name || ""}"
+              placeholder="e.g. combined_notifications_1"
+              @input="${e => {
+                const clean = this._sanitizeName(e.target.value);
+                e.target.value = clean;
+                this._set("name", clean);
+              }}">
             <div class="hint"><em>Your sensor will be created as: <span class="mono accent">${"sensor." + (c.name || "")}</span></em></div>
           </div>
-
-          ${this._showRenameWarning ? html`
-            <div style="background:rgba(246,173,85,0.08);border:1px solid rgba(246,173,85,0.4);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;">
-              <div style="font-size:0.95rem;font-weight:700;color:#f6ad55">⚠ Rename this sensor?</div>
-              <div style="font-size:0.85rem;color:#94a3b8;line-height:1.6">
-                Renaming will change the entity ID from <span class="mono" style="color:#e2e8f0">sensor.${this._originalName}</span> to a new name. Before renaming, update any references in:
-                <ul style="margin:8px 0 8px 16px;padding:0;line-height:1.8">
-                  <li>Dashboard cards</li>
-                  <li>Automations &amp; scripts</li>
-                </ul>
-                After saving, go to <strong style="color:#e2e8f0">Settings → Devices &amp; Services → Combined Notifications</strong>, find this device, click the pencil icon, and update the entity ID to match. Then reload the integration from the same page using the three-dot menu → Reload.
-              </div>
-              <div style="display:flex;gap:8px;justify-content:flex-end">
-                <button class="btn-cancel" @click="${() => { this._showRenameWarning = false; this.requestUpdate(); }}">Cancel</button>
-                <button class="backup-btn" style="background:rgba(246,173,85,0.2);border:1px solid rgba(246,173,85,0.5);color:#f6ad55" @click="${() => { this._showRenameWarning = false; this._renaming = true; this.requestUpdate(); }}">I understand, rename it</button>
-              </div>
-            </div>
-          ` : ""}
           <div class="field">
             <label>Friendly Display Name</label>
             <input type="text" .value="${c.friendly_sensor_name || ""}"
@@ -2128,12 +2135,7 @@ class CombinedNotificationsPanel extends LitElement {
             ` : ""}
 
             ${condition.entity_filter ? html`
-              <div class="entity-list" style="${isPaused ? 'opacity:0.4;pointer-events:none;' : ''}">
-                ${isPaused ? html`
-                  <div style="padding:6px 12px;background:rgba(246,173,85,0.1);border-bottom:1px solid rgba(246,173,85,0.2);font-size:0.78rem;color:#f6ad55;font-family:monospace;">
-                    ⏸ Group is paused — entities are not being monitored
-                  </div>
-                ` : ""}
+              <div class="entity-list">
                 <div class="entity-list-header">
                   <span class="entity-list-title">Matching entities in your system</span>
                   <div style="display:flex;align-items:center;gap:8px">
