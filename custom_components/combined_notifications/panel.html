@@ -5,32 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Combined Notifications</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       background: #080a0f;
       height: 100%;
       overflow-x: hidden;
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
     }
+    select option { background: #0d0f18; color: #e2e8f0; }
   </style>
 </head>
 <body>
-  <combined-notifications-panel id="cn-panel"></combined-notifications-panel>
-  <script>
-    // Get entry_id and auth token from URL params
-    const params = new URLSearchParams(window.location.search);
-    const entryId = params.get("entry_id");
-    const hassUrl = params.get("hass_url") || "";
-
-    // Wait for element to be defined then initialize
-    customElements.whenDefined("combined-notifications-panel").then(() => {
-      const panel = document.getElementById("cn-panel");
-      if (panel) {
-        panel.entryId = entryId;
-        panel.hassUrl = hassUrl;
-      }
-    });
-  </script>
+  <div id="cn-app"></div>
   <script src="/api/combined_notifications/panel.js?v=600"></script>
 </body>
 </html>
