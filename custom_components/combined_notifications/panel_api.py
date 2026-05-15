@@ -26,7 +26,7 @@ class CombinedNotificationsConfigView(HomeAssistantView):
 
     url = "/api/combined_notifications/config"
     name = "api:combined_notifications:config"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         """Return config for an entry."""
@@ -124,18 +124,21 @@ class CombinedNotificationsPanelView(HomeAssistantView):
 
     url = "/api/combined_notifications/panel"
     name = "api:combined_notifications:panel"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
-        """Serve the panel HTML page."""
-        hass: HomeAssistant = request.app["hass"]
-        html_path = pathlib.Path(__file__).parent / "panel.html"
-        html = await hass.async_add_executor_job(html_path.read_text, "utf-8")
-        return web.Response(
-            content_type="text/html",
-            text=html,
-            headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
-        )
+            """Serve the panel HTML page."""
+            hass: HomeAssistant = request.app["hass"]
+            try:
+                html_path = pathlib.Path(__file__).parent / "panel.html"
+                html = await hass.async_add_executor_job(html_path.read_text, "utf-8")
+            except Exception as e:
+                html = f"<h1 style='color:red;padding:40px'>panel.html failed to load:<br>{str(e)}</h1>"
+            return web.Response(
+                content_type="text/html",
+                text=html,
+                headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+            )
 
 
 class CombinedNotificationsPanelJSView(HomeAssistantView):
@@ -143,7 +146,7 @@ class CombinedNotificationsPanelJSView(HomeAssistantView):
 
     url = "/api/combined_notifications/panel.js"
     name = "api:combined_notifications:panel_js"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         """Serve the panel JavaScript file."""
