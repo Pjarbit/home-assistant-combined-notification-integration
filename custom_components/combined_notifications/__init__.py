@@ -1,16 +1,22 @@
 """Combined Notifications integration."""
-# Integration version: 6.0.0
+# Integration version: 6.20
 import logging
+import os
+import time
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.components import frontend, websocket_api
+from homeassistant.components.http import StaticPathConfig
 import voluptuous as vol
 from .const import DOMAIN, COLOR_MAP
 from .panel_api import async_register_views
 
 _LOGGER = logging.getLogger(__name__)
 
-VERSION_SLUG = "600"
+PANEL_TIMESTAMP = int(time.time())
+PANEL_LIT_URL = "/combined_notifications_panel_lit"
+PANEL_LIT_FILENAME = "panel_lit.js"
+VERSION_SLUG = "620"
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -47,6 +53,19 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Combined Notifications component."""
     hass.data.setdefault(DOMAIN, {})
+
+    # Register the LitElement panel JS as a static path
+    panel_path = os.path.join(os.path.dirname(__file__), PANEL_LIT_FILENAME)
+    _LOGGER.info("Registering CN LitElement panel from: %s", panel_path)
+
+    if not os.path.exists(panel_path):
+        _LOGGER.error("LitElement panel file not found at %s", panel_path)
+        return False
+
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(PANEL_LIT_URL + ".js", panel_path, False)
+    ])
+
     return True
 
 
@@ -54,33 +73,60 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Combined Notifications from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
-    # Register REST API views (idempotent)
+    compatibility_mode = entry.options.get("compatibility_mode", False)
+
+    # Register REST API views (needed for HTML mode; idempotent)
     if not hass.data[DOMAIN].get("_views_registered"):
         async_register_views(hass)
         hass.data[DOMAIN]["_views_registered"] = True
 
-    # Register websocket commands per entry — guarantees they exist before panel loads
-    websocket_api.async_register_command(hass, websocket_get_config)
-    websocket_api.async_register_command(hass, websocket_get_states)
-    websocket_api.async_register_command(hass, websocket_save_config)
+    # Register websocket commands once only — avoids duplicate registration warnings on reload
+    if not hass.data[DOMAIN].get("_ws_registered"):
+        websocket_api.async_register_command(hass, websocket_get_config)
+        websocket_api.async_register_command(hass, websocket_get_states)
+        websocket_api.async_register_command(hass, websocket_save_config)
+        hass.data[DOMAIN]["_ws_registered"] = True
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
     panel_url = f"combined-notifications-{entry.entry_id}"
+
     # Remove stale panel before re-registering
     try:
         frontend.async_remove_panel(hass, panel_url)
-    except Exception:
-        pass
-    frontend.async_register_built_in_panel(
-        hass,
-        component_name="iframe",
-        sidebar_title=None,
-        sidebar_icon=None,
-        frontend_url_path=panel_url,
-        config={"url": f"/api/combined_notifications/panel?entry_id={entry.entry_id}&v={VERSION_SLUG}"},
-        require_admin=True,
-    )
+    except Exception as err:
+        _LOGGER.debug("Panel %s not removed (may not have been registered): %s", panel_url, err)
+
+    if compatibility_mode:
+        _LOGGER.info("Combined Notifications: using HTML compatibility panel for entry %s", entry.entry_id)
+        frontend.async_register_built_in_panel(
+            hass,
+            component_name="iframe",
+            sidebar_title=None,
+            sidebar_icon=None,
+            frontend_url_path=panel_url,
+            config={"url": f"/api/combined_notifications/panel?entry_id={entry.entry_id}&v={VERSION_SLUG}"},
+            require_admin=True,
+        )
+    else:
+        _LOGGER.info("Combined Notifications: using LitElement panel for entry %s", entry.entry_id)
+        frontend.async_register_built_in_panel(
+            hass,
+            component_name="custom",
+            sidebar_title=None,
+            sidebar_icon=None,
+            frontend_url_path=panel_url,
+            config={
+                "_panel_custom": {
+                    "name": "combined-notifications-panel",
+                    "js_url": PANEL_LIT_URL + f".js?v={PANEL_TIMESTAMP}",
+                    "embed_iframe": False,
+                    "trust_external_script": False,
+                    "config": {"entry_id": entry.entry_id},
+                }
+            },
+            require_admin=True,
+        )
 
     return True
 
