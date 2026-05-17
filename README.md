@@ -510,16 +510,22 @@ This integration is free and will always be free. If you find it useful, skip th
 
 ---
 
-## Card-Mod Compatibility — Blank Screen Conflict
+## Card-Mod Compatibility — Blank Screen Conflict — Use Compatibility Mode
 
 Combined Notifications may work with card-mod installed, it may not. Some users will experience a blank screen when opening the configuration panel. Combined Notifications may not be compatible with card-mod's older deprecated code on your system. Card-mod does not play well with current Home Assistant LitElements (design features) that were brought into HA as recent coding protocols.
 
-This is a known conflict between newer integrations and card-mod. Card-mod has been updated to a new integration called UIX to fix issues with newer integrations.
+This is a known conflict between newer integrations and card-mod. 
 
-## ⚠️**If you are having a blank screen issue, you will need to update card-mod to UIX.**
+If your configuration panel appears blank after clicking Configure, 
+  Close the blank panel, 
+  Go to **Settings → Integrations**, 
+  find **Combined Notifications**,
+  Click the **gear icon** on the integration card. 
+  You'll see a checkbox labeled **"Enable compatibility mode (HTML panel)"** — check it
+  **Hit Save.** Home Assistant will automatically reload the integration and switch to an alternate panel that works on these affected (blank screen) systems. 
 
-It is a drop-in replacement and no additional coding or changes in your system should be necessary as it reads card-mod styles and custom:card-mod cards without changes. When you remove card-mod, you will also need to completely remove any card-mod resource lines from your configuration.yaml if you have them.
-
+  **Note:** Compatability mode disables real time entity status IN THE PANEL VIEW ONLY (The integration is still in real time and there is a new refresh button to see the live status) Ever other configuration and function remain available and unchanged.
+  
 ---
 
 *Special thanks to David Wallis and Jason Bogart for their hard work and beta testing.*
