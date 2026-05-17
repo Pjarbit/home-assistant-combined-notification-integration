@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 6.2.0
+# Integration version: 6.2.1
 import logging
 import os
 import time
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 PANEL_TIMESTAMP = int(time.time())
 PANEL_LIT_URL = "/combined_notifications_panel_lit"
 PANEL_LIT_FILENAME = "panel_lit.js"
-VERSION_SLUG = "620"
+
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -105,7 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sidebar_title=None,
             sidebar_icon=None,
             frontend_url_path=panel_url,
-            config={"url": f"/api/combined_notifications/panel?entry_id={entry.entry_id}&v={VERSION_SLUG}"},
+            config={"url": f"/api/combined_notifications/panel?entry_id={entry.entry_id}&v={PANEL_TIMESTAMP}"},
             require_admin=True,
         )
     else:
