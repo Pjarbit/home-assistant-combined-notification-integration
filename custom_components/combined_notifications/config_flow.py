@@ -72,17 +72,20 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
-    """Options flow — compatibility toggle then redirect to panel."""
+    """Options flow — show compatibility toggle, save preference, open correct panel."""
 
     async def async_step_init(self, user_input=None):
-        """Show compatibility mode toggle first, then open the panel."""
+        """Show compatibility mode checkbox pre-filled from last saved preference."""
         if user_input is not None:
             compatibility_mode = user_input.get("compatibility_mode", False)
-            # Save the option and trigger an entry reload so the correct panel registers
-            return self.async_create_entry(
-                title="",
-                data={"compatibility_mode": compatibility_mode},
+            # Save preference directly to options
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                options={"compatibility_mode": compatibility_mode},
             )
+            # Open the correct panel
+            panel_url = f"/combined-notifications-{self.config_entry.entry_id}"
+            return self.async_external_step(url=panel_url)
 
         current_mode = self.config_entry.options.get("compatibility_mode", False)
 
@@ -94,3 +97,7 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             step_id="init",
             data_schema=schema,
         )
+
+    async def async_step_external(self, user_input=None):
+        """Handle return from external panel."""
+        return self.async_create_entry(title="", data=self.config_entry.options)
