@@ -151,7 +151,7 @@ class CombinedNotificationsPanelJSView(HomeAssistantView):
     async def get(self, request: web.Request) -> web.Response:
         """Serve the panel JavaScript file."""
         hass: HomeAssistant = request.app["hass"]
-        js_path = pathlib.Path(__file__).parent / "combined_notifications_panel.js"
+        js_path = pathlib.Path(__file__).parent / "panel_html.js"
         data = await hass.async_add_executor_job(js_path.read_bytes)
         return web.Response(
             body=data,
