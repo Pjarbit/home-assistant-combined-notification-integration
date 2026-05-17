@@ -26,9 +26,15 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configure Combined Notifications",
-        "description": "Use the Configure button in Devices & Services to open the full configuration panel."
+        "title": "Combined Notifications Settings",
+        "description": "If the configuration panel appears blank, enable compatibility mode and save. This switches to an alternate panel that works on all systems. Note: compatibility mode disables real-time entity updates and the native HA icon picker.",
+        "data": {
+          "compatibility_mode": "Enable compatibility mode (HTML panel)"
+        }
       }
+    },
+    "abort": {
+      "panel_opened": "Configuration panel opened."
     }
   }
 }
