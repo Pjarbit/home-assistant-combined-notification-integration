@@ -1,4 +1,4 @@
-# Combined Notifications for Home Assistant — v5
+# Combined Notifications for Home Assistant — v7.0.0
 
 ![Combined Notifications](media/logo.png)
 
@@ -34,6 +34,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
   - [Smart Groups](#smart-groups--expanded)
 - [Sensor Behavior](#-sensor-behavior)
 - [Alert Count](#-alert-count)
+- [Automations — One Sensor, One Automation](#-automations--one-sensor-unlimited-automations)
 - [Dashboard Cards](#️-dashboard-cards)
   - [1. Basic — Hardcoded Colors](#1-basic--hardcoded-colors)
   - [2. Basic — Integration Colors](#2-basic--integration-colors)
@@ -234,6 +235,70 @@ badge_icon: |
   mdi:numeric-{{ states('sensor.YOUR_SENSOR_FAULT_COUNT') }}
   {% endif %}
 ```
+
+---
+
+
+---
+
+## 🤖 Automations — One Sensor, Unlimited Automations
+
+Combined Notifications is a real Home Assistant sensor. That means one automation can handle everything — send a text, flash a light, trigger an alarm, make an announcement. Not 50 automations. One.
+
+Use `sensor.YOUR_SENSOR_FAULT_COUNT` as your trigger. When the count goes up, something new is alerting. When it hits zero, everything is clear.
+
+### Automation 1 — New Alert (Count goes from 0 to alerting)
+
+```yaml
+alias: Household Sensors — New Alert
+trigger:
+  - platform: state
+    entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
+    from: "0"
+condition: []
+action:
+  - action: notify.mobile_app_your_phone
+    data:
+      title: "New Alert"
+      message: "{{ states('sensor.YOUR_SENSOR_NAME') }}"
+```
+
+### Automation 2 — Alerts Increasing (Additional sensors alerting)
+
+```yaml
+alias: Household Sensors — Alerts Increasing
+trigger:
+  - platform: state
+    entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.to_state.state | int > trigger.from_state.state | int
+         and trigger.from_state.state | int > 0 }}
+action:
+  - action: notify.mobile_app_your_phone
+    data:
+      title: "More Alerts"
+      message: "{{ states('sensor.YOUR_SENSOR_NAME') }}"
+```
+
+### Automation 3 — All Clear (Count drops to 0)
+
+```yaml
+alias: Household Sensors — All Clear
+trigger:
+  - platform: state
+    entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
+    to: "0"
+condition: []
+action:
+  - action: notify.mobile_app_your_phone
+    data:
+      title: "All Clear"
+      message: "Everything is back to normal."
+```
+
+Replace `sensor.YOUR_SENSOR_FAULT_COUNT` and `sensor.YOUR_SENSOR_NAME` with your actual sensor names. Replace `notify.mobile_app_your_phone` with your notify service. The automation or dashboard card is on you. The monitoring and single sensor with all entities is on the integration.
 
 ---
 
