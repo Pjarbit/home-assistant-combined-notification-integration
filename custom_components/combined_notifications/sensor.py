@@ -426,7 +426,7 @@ class CombinedNotificationSensor(Entity):
             if operator == ">=": return a >= e
             if operator == "<=": return a <= e
         except (ValueError, TypeError) as err:
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Condition evaluation failed (%s %s %s): %s",
                 actual, operator, expected, err,
             )
