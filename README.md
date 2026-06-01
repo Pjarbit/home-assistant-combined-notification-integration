@@ -22,9 +22,9 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 
 ## 📋 Table of Contents
 
-- [Features and What's New in Version 7.x.x](#-features-and-whats-new-in-version-5)
-- [What's New in Version 7.x.x](#-features-and-whats-new-in-version-5)
-- [Upgrading from v4](#-upgrading-from-v4-to-v7.x.x)
+- [Features and What's New in Version 7.x.x](#-features-and-whats-new-in-version-7xx)
+- [What's New in Version 7.x.x](#-features-and-whats-new-in-version-7xx)
+- [Upgrading from v4](#️-upgrading-from-v4-to-v7xx)
 - [Installation](#-installation)
 - [Setup](#️-setup)
 - [Configuration Panel](#️-configuration-panel)
@@ -34,23 +34,27 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
   - [Smart Groups](#smart-groups--expanded)
 - [Sensor Behavior](#-sensor-behavior)
 - [Alert Count](#-alert-count)
-- [Automations — One Sensor, Unlimited Automations](#-automations--one-sensor-unlimited-automations)
+- [Automations — One Sensor, One Trigger, Unlimited Actions](#-automations--one-sensor-one-trigger-unlimited-actions)
+  - [Automation 1 — First Alert](#automation-1--first-alert)
+  - [Automation 2 — Additional Alerts (Increasing Number)](#automation-2--additional-alerts-increasing-number)
+  - [Automation 3 — All Clear](#automation-3--all-clear-count-drops-to-0)
 - [Dashboard Cards](#️-dashboard-cards)
-  - [1. Basic — Hardcoded Colors](#1-basic--hardcoded-colors)
-  - [2. Basic — Integration Colors](#2-basic--integration-colors)
-  - [3. Advanced — Integration Colors with card-mod](#3-advanced--integration-colors-with-card-mod-recommended)
+  - [1. Basic — Hardcoded Colors](#1-basic-card--hardcoded-colors-overrides-the-integrated-sensor-styling)
+  - [2. Basic — Integration Colors](#2-basic--card-that-uses-the-integration-colors-and-icons)
+  - [3. Advanced — Integration Colors with card-mod](#3-advanced--card-with-integration-colors-with-card-mod-uix-and-advanced-styling)
 - [Alert Ticker Card Pairing](#-alert-ticker-card-pairing)
 - [Combined Notifications vs Alert Ticker](#-combined-notifications-vs-alert-ticker)
+- [Troubleshooting](#-troubleshooting)
+  - [Card-Mod Compatibility — Blank Screen Conflict](#card-mod-compatibility--blank-screen-conflict)
 - [A Note from the Developer](#-a-note-from-the-developer)
-- [Card-Mod Compatibility — Blank Screen Conflict](#card-mod-compatibility--blank-screen-conflict)
-- [Removal](#-removal)
+- [Removal](#️-removal)
 - [License](#-license)
 
 ---
 
 ## ✅ Features and What's New in Version 7.x.x
 
-**Version 7.x.x — Starting at v5, we rebuilt from the ground up with all new features and functions**
+**Version 7.x.x — Rebuilt from the ground up with all new features and functions**
 
 - Monitor unlimited entities with flexible alert conditions
 - Individual conditions — monitor specific entities one at a time
@@ -239,34 +243,33 @@ badge_icon: |
 ---
 
 
----
-
-## 🤖 Automations — One Sensor, Unlimited Automations
+## 🤖 Automations — One Sensor, One Trigger, Unlimited Actions
 
 Combined Notifications is a real Home Assistant sensor. That means one automation can handle everything — send a text, flash a light, trigger an alarm, make an announcement. Not 50 automations. One.
 
 Use `sensor.YOUR_SENSOR_FAULT_COUNT` as your trigger. When the count goes up, something new is alerting. When it hits zero, everything is clear.
 
-### Automation 1 — New Alert (Count goes from 0 to alerting)
+### Automation 1 — First Alert
 
 ```yaml
-alias: Household Sensors — New Alert
+alias: Household Sensors — First Alert
 trigger:
   - platform: state
     entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
     from: "0"
 condition: []
 action:
+  # Fill in your action — examples: notify.mobile_app_your_phone, light.turn_on, alarm_control_panel.alarm_trigger
   - action: notify.mobile_app_your_phone
     data:
-      title: "New Alert"
+      title: "Combined Notifications Alert"
       message: "{{ states('sensor.YOUR_SENSOR_NAME') }}"
 ```
 
-### Automation 2 — Alerts Increasing (Additional sensors alerting)
+### Automation 2 — Additional Alerts (Increasing Number)
 
 ```yaml
-alias: Household Sensors — Alerts Increasing
+alias: Household Sensors — Additional Alerts
 trigger:
   - platform: state
     entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
@@ -276,9 +279,10 @@ condition:
       {{ trigger.to_state.state | int > trigger.from_state.state | int
          and trigger.from_state.state | int > 0 }}
 action:
+  # Fill in your action — examples: notify.mobile_app_your_phone, light.turn_on, alarm_control_panel.alarm_trigger
   - action: notify.mobile_app_your_phone
     data:
-      title: "More Alerts"
+      title: "Combined Notifications Alert"
       message: "{{ states('sensor.YOUR_SENSOR_NAME') }}"
 ```
 
@@ -292,15 +296,14 @@ trigger:
     to: "0"
 condition: []
 action:
+  # Fill in your action — examples: notify.mobile_app_your_phone, light.turn_on, alarm_control_panel.alarm_trigger
   - action: notify.mobile_app_your_phone
     data:
-      title: "All Clear"
+      title: "Combined Notifications All Clear"
       message: "Everything is back to normal."
 ```
 
 Replace `sensor.YOUR_SENSOR_FAULT_COUNT` and `sensor.YOUR_SENSOR_NAME` with your actual sensor names. Replace `notify.mobile_app_your_phone` with your notify service. The automation or dashboard card is on you. The monitoring and single sensor with all entities is on the integration.
-
----
 
 ## 🖼️ Dashboard Cards
 
@@ -429,7 +432,7 @@ hold_action:
 
 ---
 
-### 3. Advanced — Card with Integration Colors with card-mod (uix) and advanced styling
+### 3. Advanced — Card with Integration Colors with card-mod (UIX) and advanced styling
 
 ![All Clear](media/card_all_clear.png)
 ![Alert](media/card_alert.png)
@@ -561,21 +564,41 @@ Alert Ticker is a great addition to HA. It has a ton of card styles. Because Com
 
 ---
 
-## 💬 A Note from the Developer
+## 🔧 Troubleshooting
 
-This integration is free and will always be free. If you find it useful, skip the coffee and give $5 to someone who needs it.
+### Blank Screen — Compatibility Mode
 
----
+If your configuration panel appears blank after clicking Configure, this is usually caused by a conflict with the **card-mod** frontend extension. Close the blank panel, go to **Settings → Integrations**, find **Combined Notifications**, and click the **gear icon** on the integration card. You'll see a checkbox labeled **"Enable compatibility mode (HTML panel)"** — check it and click **Open Configuration Panel**. Home Assistant will automatically reload the integration and switch to an alternate panel that works on all systems.
 
-## 🗑️ Removal
+Note: Compatibility mode disables real-time entity status in the panel view only. The integration itself still runs in real time, and a refresh button is available to see live status. All other configuration and functions remain available and unchanged.
 
-- Go to **Settings → Devices & Services**
-- Find **Combined Notifications** and click **Delete**
-- The created sensors will be removed automatically
+Special thanks to David Wallis and Jason Bogart for their hard work and beta testing.
 
 ---
 
-## Card-Mod Compatibility — Blank Screen Conflict — Use Compatibility Mode
+### Panel Version Does Not Match After Update
+
+If the version shown in the panel does not match the version you just installed, your browser has cached the old panel. A normal refresh may not fix this — you need to unregister the service worker.
+
+1. Press **F12** to open DevTools
+2. Go to **Application → Service Workers**
+3. Click **Unregister** next to your Home Assistant URL
+4. **Close the browser completely**
+5. Reopen the browser and navigate to Home Assistant
+
+> **Note:** Unregistering the service worker and closing the browser completely is the only method confirmed to work consistently. Simply hitting refresh or Shift+Ctrl+R may not work.
+
+> **Cloudflare users:** You may also need to purge the cache from your Cloudflare dashboard under **Caching → Configuration → Purge Everything** after updating.
+
+---
+
+### Sensor State Truncated at 255 Characters
+
+Home Assistant has a hard limit of 255 characters on sensor states. If you monitor a large number of entities with long names, the sensor state may be truncated in the log. The integration continues to function correctly regardless — this is a display limitation only. A workaround is planned for a future release that will expose the full alert list as a sensor attribute.
+
+---
+
+### Card-Mod Compatibility — Blank Screen Conflict
 
 Combined Notifications may work with card-mod installed, it may not. Some users will experience a blank screen when opening the configuration panel. Combined Notifications may not be compatible with card-mod's older deprecated code on your system. Card-mod does not play well with current Home Assistant LitElements (design features) that were brought into HA as recent coding protocols.
 
@@ -594,6 +617,21 @@ If your configuration panel appears blank after clicking Configure,
 ---
 
 *Special thanks to David Wallis and Jason Bogart for their hard work and beta testing.*
+
+---
+
+
+## 💬 A Note from the Developer
+
+This integration is free and will always be free. If you find it useful, skip the coffee and give $5 to someone who needs it.
+
+---
+
+## 🗑️ Removal
+
+- Go to **Settings → Devices & Services**
+- Find **Combined Notifications** and click **Delete**
+- The created sensors will be removed automatically
 
 ---
 
