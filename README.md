@@ -1,6 +1,6 @@
 # Combined Notifications for Home Assistant — v7.0.0
 
-![Combined Notifications](media/logo.png)
+![Combined Notifications](media/logonew.png)
 
 [![Demo](media/demo.gif)](media/demo.gif)
 
