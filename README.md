@@ -22,9 +22,9 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 
 ## 📋 Table of Contents
 
-- [Features and What's New in Version 5](#-features-and-whats-new-in-version-5)
-- [What's New in Version 5](#-features-and-whats-new-in-version-5)
-- [Upgrading from v4](#-upgrading-from-v4-to-v5)
+- [Features and What's New in Version 7.x.x](#-features-and-whats-new-in-version-5)
+- [What's New in Version 7.x.x](#-features-and-whats-new-in-version-5)
+- [Upgrading from v4](#-upgrading-from-v4-to-v7.x.x)
 - [Installation](#-installation)
 - [Setup](#️-setup)
 - [Configuration Panel](#️-configuration-panel)
@@ -34,7 +34,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
   - [Smart Groups](#smart-groups--expanded)
 - [Sensor Behavior](#-sensor-behavior)
 - [Alert Count](#-alert-count)
-- [Automations — One Sensor, One Automation](#-automations--one-sensor-unlimited-automations)
+- [Automations — One Sensor, Unlimited Automations](#-automations--one-sensor-unlimited-automations)
 - [Dashboard Cards](#️-dashboard-cards)
   - [1. Basic — Hardcoded Colors](#1-basic--hardcoded-colors)
   - [2. Basic — Integration Colors](#2-basic--integration-colors)
@@ -48,9 +48,9 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 
 ---
 
-## ✅ Features and What's New in Version 5
+## ✅ Features and What's New in Version 7.x.x
 
-**Version 5 — Rebuilt from the ground up with all new features and functions**
+**Version 7.x.x — Starting at v5, we rebuilt from the ground up with all new features and functions**
 
 - Monitor unlimited entities with flexible alert conditions
 - Individual conditions — monitor specific entities one at a time
@@ -70,9 +70,9 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 
 ---
 
-## ⬆️ Upgrading from v4 to v5
+## ⬆️ Upgrading from v4 to v7.x.x
 
-Moving from v4 to v5 should be seamless. Your existing sensors should carry over to the new version without any issues.
+Moving from v4 to v7.x.x should be seamless. Your existing sensors should carry over to the new version without any issues.
 
 Use caution before upgrading. Going back to v4 will not be easy. This upgrade is not downgradable without rebuilding all your sensors from scratch. Make a backup of your Home Assistant configuration before updating, just in case you want to go back.
 
