@@ -1,4 +1,4 @@
-# Combined Notifications for Home Assistant — v7.0.0
+# Combined Notifications for Home Assistant — v7.x.x
 
 ![Combined Notifications](media/logonew.png)
 
