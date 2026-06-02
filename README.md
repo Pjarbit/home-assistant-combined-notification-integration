@@ -4,7 +4,7 @@
 
 [![Demo](media/demo.gif)](media/demo.gif)
 
-**Monitor and group multiple entity conditions — all on ONE CARD. No YAML editing required.**
+**Monitor and group multiple entity conditions — all on ONE SENSOR & ONE CARD. No YAML editing required.**
 
 Hundreds of conditions can be monitored with no slowdown or lagging in your frontend dashboard.
 
@@ -14,7 +14,7 @@ Combined Notifications monitors the entities you choose and alerts you when some
 - Door left unlocked: **Kitchen Doorwall Unlocked** — count: 1
 - Battery critical: **Back Door Sensor 12%** — count: 1
 
-No entity IDs. Just the **custom names you** gave your devices. All on **one card**.
+No entity IDs. Just the **custom names you** gave your devices. All on **one sensor, and one card**.
 
 *⚠️ Card-mod users — see below.*
 
