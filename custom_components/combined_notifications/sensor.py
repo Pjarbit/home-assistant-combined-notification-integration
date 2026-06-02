@@ -25,9 +25,10 @@ async def async_setup_entry(
     friendly_sensor_name = config_entry.data.get("friendly_sensor_name", name)
     conditions = config_entry.data.get("conditions", [])
     settings = _build_settings(config_entry.data)
+    use_attributes = config_entry.options.get("use_attributes", False)
 
     sensor = CombinedNotificationSensor(
-        hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id
+        hass, name, friendly_sensor_name, conditions, settings, config_entry.entry_id, use_attributes
     )
     count_sensor = CombinedNotificationCountSensor(
         hass, name, sensor, config_entry.entry_id
@@ -72,12 +73,14 @@ class CombinedNotificationSensor(Entity):
         conditions: list[dict],
         settings: dict[str, Any],
         entry_id: str,
+        use_attributes: bool = False,
     ):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
         self._friendly_sensor_name = friendly_sensor_name
         self._entry_id = entry_id
+        self._use_attributes = use_attributes
         self._attr_name = (
             friendly_sensor_name
             if friendly_sensor_name and friendly_sensor_name.strip()
@@ -220,7 +223,7 @@ class CombinedNotificationSensor(Entity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {
+        attrs = {
             "unmet_conditions": self._unmet,
             "number_unmet": len(self._unmet),
             "number_total": len(self._conditions),
@@ -237,6 +240,10 @@ class CombinedNotificationSensor(Entity):
             "hide_title": self._settings["hide_title"],
             "hide_title_alert": self._settings["hide_title_alert"],
         }
+        # In attribute mode, also expose the full alert list as a Python list
+        if self._use_attributes:
+            attrs["alert_list"] = list(self._unmet)
+        return attrs
 
     @property
     def device_info(self):
@@ -381,16 +388,23 @@ class CombinedNotificationSensor(Entity):
             if label and label.strip():
                 self._unmet.append(label)
 
-        state = (
-            self._settings["text_all_clear"]
-            if not self._unmet
-            else ", ".join(self._unmet)
-        )
-        self._state = state[:255]
-        if len(state) > 255:
-            _LOGGER.warning(
-                "State truncated to 255 characters for sensor %s", self._name
+        # Build state based on mode
+        if self._use_attributes:
+            # Attribute mode: short binary state, full list in attributes
+            self._state = "on" if self._unmet else "off"
+        else:
+            # Classic mode: full alert list in state (255 char limit applies)
+            alert_string = (
+                self._settings["text_all_clear"]
+                if not self._unmet
+                else ", ".join(self._unmet)
             )
+            if len(alert_string) > 255:
+                _LOGGER.debug(
+                    "State truncated to 255 characters for sensor %s", self._name
+                )
+            self._state = alert_string[:255]
+
         self._attr_icon = (
             self._settings["icons"]["clear"]
             if not self._unmet
@@ -450,13 +464,22 @@ class CombinedNotificationSensor(Entity):
             if "friendly_sensor_name" in new_settings and new_settings["friendly_sensor_name"]:
                 self._attr_name = new_settings["friendly_sensor_name"]
                 self._friendly_sensor_name = new_settings["friendly_sensor_name"]
-            self._state = new_settings["text_all_clear"][:255]
+            if self._use_attributes:
+                self._state = "off"
+            else:
+                self._state = new_settings["text_all_clear"][:255]
             self._attr_icon = new_settings["icons"]["clear"]
             await self.async_update_conditions(new_conditions)
             self.async_write_ha_state()
         except Exception as err:
             _LOGGER.error("Error updating settings: %s", err)
             raise
+
+    async def async_update_use_attributes(self, use_attributes: bool) -> None:
+        """Update attribute mode flag and re-evaluate state."""
+        self._use_attributes = use_attributes
+        await self.async_update()
+        self.async_write_ha_state()
 
 
 # ── Count sensor ──────────────────────────────────────────────────────────────
