@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v7.1.0
+ * Combined Notifications Panel v7.1.1
  * Vanilla JS — iframe REST API approach
- * pja 7.1.0
+ * pja 7.1.1
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "7.1.0";
+const VERSION = "7.1.1";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -130,6 +130,7 @@ function buildIconPicker(id, label, value) {
 // ---------------------------------------------------------------------------
 
 let _config = null;
+let _options = {};
 let _states = {};
 let _allEntityList = [];
 let _activeTab = "general";
@@ -176,6 +177,7 @@ async function loadConfig() {
     console.log('%cCN Panel: Config loaded successfully', 'color:#39FF14');
 
     _config = { ...result.config };
+    _options = { ...(result.options || {}) };
     if (!_config.conditions) _config.conditions = [];
 
     _config.conditions = _config.conditions.map(c => ({
@@ -449,7 +451,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 7.1.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 7.1.1</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -527,8 +529,10 @@ function buildGeneral() {
       ${buildField("Friendly Display Name", `<input id="f-friendly" type="text" value="${esc(c.friendly_sensor_name || "")}" placeholder="e.g. Home Security" style="${inputStyle()}">`)}
     `)}
     ${buildCard("All Clear State", `
-      ${buildField("All Clear Text", `<input id="f-allclear" type="text" value="${esc(c.text_all_clear || "ALL CLEAR")}" style="${inputStyle()}">`)}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      ${buildField("All Clear Text", `
+        <input id="f-allclear" type="text" value="${esc(c.text_all_clear || "ALL CLEAR")}" style="${inputStyle()}">
+        ${_options.use_attributes ? `<div style="color:#63b3ed;font-size:0.8rem;margin-top:4px;">In Attribute Mode the sensor state is on/off. These values (text, colors, and icons) are still available as attributes so you can use them in cards when the fault count is 0.</div>` : ""}
+      `)}      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>${buildIconPicker("f-icon-clear", "All Clear Icon", c.icon_all_clear || "mdi:hand-okay")}</div>
         <div>${buildIconPicker("f-icon-alert", "Alert Icon", c.icon_alert || "mdi:alert-circle")}</div>
       </div>
@@ -1389,7 +1393,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v7.1.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v7.1.1 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
