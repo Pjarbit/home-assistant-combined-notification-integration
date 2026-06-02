@@ -91,7 +91,7 @@ If you are a standard user, do not select it. If you are a power user with many 
 {{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}
 ```
 
-> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README.  Changing an existing sensor from stantard to attribute mode or back will require a home assistant restart to register this change.
+> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README.  **Changing an existing sensor from stantard to attribute mode or back will require a home assistant restart to register this change.**
 
 
 ---
