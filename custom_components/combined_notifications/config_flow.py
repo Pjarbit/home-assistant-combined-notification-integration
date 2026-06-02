@@ -78,19 +78,22 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         """Show compatibility mode checkbox pre-filled from last saved preference."""
         if user_input is not None:
             compatibility_mode = user_input.get("compatibility_mode", False)
+            use_attributes = user_input.get("use_attributes", False)
             # Save preference directly to options
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
-                options={"compatibility_mode": compatibility_mode},
+                options={"compatibility_mode": compatibility_mode, "use_attributes": use_attributes},
             )
             # Open the correct panel
             panel_url = f"/combined-notifications-{self.config_entry.entry_id}"
             return self.async_external_step(url=panel_url)
 
         current_mode = self.config_entry.options.get("compatibility_mode", False)
+        current_use_attributes = self.config_entry.options.get("use_attributes", False)
 
         schema = vol.Schema({
             vol.Required("compatibility_mode", default=current_mode): bool,
+            vol.Required("use_attributes", default=current_use_attributes): bool,
         })
 
         return self.async_show_form(
