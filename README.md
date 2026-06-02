@@ -32,6 +32,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
   - [Conditions Tab](#conditions-tab--overview)
   - [Individual Conditions](#individual-conditions--expanded)
   - [Smart Groups](#smart-groups--expanded)
+  - [Attributes Sensor Option](#-attributes-sensor-option)
 - [Sensor Behavior](#-sensor-behavior)
 - [Alert Count](#-alert-count)
 - [Automations — One Sensor, One Trigger, Unlimited Actions](#-automations--one-sensor-one-trigger-unlimited-actions)
@@ -71,6 +72,24 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 - Pause conditions without deleting them 🆕
 - **Alert Count** sensor created automatically alongside every sensor you make 🆕
 - Still ONE sensor, ONE card 🆕
+
+### 🔢 Attributes Sensor Option
+
+There is a subset of users who have a lot of entities that will push the limits of Home Assistant's 255 character limit on sensor data. For those outlier cases, we now have a toggle that will move all sensor data to attributes that don't have the 255 character limit.
+
+If you are a standard user, do not select it. If you are a power user with many entities that are in alert status and need to get around Home Assistant's character limit, this is for you. You will have to change your cards and automations to reference the attribute and not the sensor state directly.
+
+**When enabled:**
+- Sensor state becomes `on` (alerting) or `off` (clear)
+- Full alert list is available as `alert_list` attribute — a Python list with no character limit
+- To enable: Settings → Integrations → Combined Notifications → gear icon → check **Enable attribute mode**
+
+**Template example for cards and automations:**
+```yaml
+# Get the full alert list from attributes
+{{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}
+```
+
 
 ---
 
