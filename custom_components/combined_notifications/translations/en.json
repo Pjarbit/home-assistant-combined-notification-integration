@@ -29,7 +29,12 @@
         "title": "Combined Notifications Settings",
         "description": "If the configuration panel appears blank, enable compatibility mode. Note: compatibility mode disables real-time entity updates and the native HA icon picker.",
         "data": {
-          "compatibility_mode": "Enable compatibility mode (HTML panel)"
+          "compatibility_mode": "Enable compatibility mode (HTML panel)",
+          "use_attributes": "Enable attribute mode (recommended for large setups)"
+        },
+        "data_description": {
+          "compatibility_mode": "Use if your configuration panel appears blank.",
+          "use_attributes": "When enabled: sensor state becomes on/off, full alert list moves to alert_list attribute (no 255 character limit). Default is off — existing automations and cards are unaffected."
         },
         "submit": "Open Configuration Panel"
       }
