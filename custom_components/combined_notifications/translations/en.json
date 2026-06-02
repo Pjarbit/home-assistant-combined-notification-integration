@@ -27,7 +27,7 @@
     "step": {
       "init": {
         "title": "Combined Notifications Settings",
-        "description": "If the configuration panel appears blank, enable compatibility mode. Note: compatibility mode disables real-time entity updates and the native HA icon picker.",
+        "description": "If the configuration panel appears blank, enable compatibility mode. Note: compatibility mode disables real-time entity updates and the native HA icon picker.\n\n⚠️ BREAKING CHANGE — Attribute mode: if you enable this, your existing dashboard cards and automations WILL BREAK. You must update them to reference the attribute instead of the sensor state directly. Use state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') in place of states('sensor.YOUR_SENSOR_NAME').",
         "data": {
           "compatibility_mode": "Enable compatibility mode (HTML panel)",
           "use_attributes": "Enable attribute mode (recommended for large setups)"
