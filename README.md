@@ -50,6 +50,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 - [A Note from the Developer](#-a-note-from-the-developer)
 - [Removal](#️-removal)
 - [License](#-license)
+- [Addendum — Attribute Mode Card & Automation Examples](#️-attribute-mode-users-only--dashboard-cards--automations)
 
 ---
 
@@ -89,6 +90,8 @@ If you are a standard user, do not select it. If you are a power user with many 
 # Get the full alert list from attributes
 {{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}
 ```
+
+> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README.
 
 
 ---
