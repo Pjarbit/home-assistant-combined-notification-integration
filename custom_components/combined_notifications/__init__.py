@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 7.0.1
+# Integration version: 7.1.0
 import logging
 import os
 import time
@@ -74,6 +74,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     compatibility_mode = entry.options.get("compatibility_mode", False)
+    use_attributes = entry.options.get("use_attributes", False)
+
+    # If sensor already loaded, update use_attributes flag live
+    sensor = hass.data[DOMAIN].get(entry.entry_id)
+    if sensor and hasattr(sensor, "async_update_use_attributes"):
+        await sensor.async_update_use_attributes(use_attributes)
 
     # Register REST API views (needed for HTML mode; idempotent)
     if not hass.data[DOMAIN].get("_views_registered"):
