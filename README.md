@@ -42,7 +42,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one car
 - [Dashboard Cards](#️-dashboard-cards)
   - [1. Basic — Hardcoded Colors](#1-basic-card--hardcoded-colors-overrides-the-integrated-sensor-styling)
   - [2. Basic — Integration Colors](#2-basic--card-that-uses-the-integration-colors-and-icons)
-  - [3. Advanced — Integration Colors with card-mod](#3-advanced--card-with-integration-colors-with-card-mod-uix-and-advanced-styling)
+  - [3. Advanced — Integration Colors with card-mod](#3-advanced--card-with-integration-colors-with-card-mod-and-advanced-styling)
 - [Alert Ticker Card Pairing](#-alert-ticker-card-pairing)
 - [Combined Notifications vs Alert Ticker](#-combined-notifications-vs-alert-ticker)
 - [Troubleshooting](#-troubleshooting)
@@ -451,12 +451,12 @@ hold_action:
 
 ---
 
-### 3. Advanced — Card with Integration Colors with card-mod (UIX) and advanced styling
+### 3. Advanced — Card with Integration Colors with card-mod and advanced styling
 
 ![All Clear](media/card_all_clear.png)
 ![Alert](media/card_alert.png)
 
-This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod) (uix). The card is coded with card-mod for backward compatibility. The card-mod section adds a light reflection effect for a polished appearance.
+This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod). The card-mod section adds a light reflection effect for a polished appearance. The card-mod section adds a light reflection effect for a polished appearance.
 
 Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor. Paste into a Manual card in your dashboard.
 
@@ -657,3 +657,259 @@ This integration is free and will always be free. If you find it useful, skip th
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE.md) for details.
+
+---
+
+---
+
+## ⚠️ ATTRIBUTE MODE USERS ONLY — Dashboard Cards & Automations
+
+**The following cards and automations are for users who have enabled Attribute Mode only. If you are not using Attribute Mode, use the cards and automations listed above.**
+
+---
+
+---
+
+### Card 1 — Basic — Hardcoded Colors (Attribute Mode)
+
+```yaml
+type: custom:button-card
+entity: sensor.YOUR_SENSOR_NAME
+name: NOTIFICATIONS
+show_name: true
+show_icon: true
+show_state: false
+styles:
+  card:
+    - background-color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return "#c80404"; } else { return
+        "rgba(67, 73, 82, 1)"; } ]]]
+    - border-radius: 10px
+    - padding: 6px 10px 10px 10px
+    - color: rgb(255, 255, 255)
+    - white-space: normal
+    - font-size: 20px
+  name:
+    - font-weight: bold
+    - text-align: center
+    - font-size: 23px
+    - margin-top: 0
+  label:
+    - white-space: normal
+    - display: block
+    - max-width: 100%
+    - padding-top: 5px
+    - text-align: center
+  icon:
+    - color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') === '0') { return "rgb(38, 141, 53)"; } else {
+        return "rgb(255, 255, 255)"; } ]]]
+    - width: 70px
+    - height: 70px
+    - margin: 5px 0
+icon: >
+  [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return "mdi:alert-circle"; } else { return
+  "mdi:hand-okay"; } ]]]
+show_label: true
+label: >
+  [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return entity.attributes.alert_list.join(', '); } else { return entity.attributes.text_all_clear; } ]]]
+tap_action:
+  action: none
+hold_action:
+  action: none
+```
+
+---
+
+### Card 2 — Integration Colors (Attribute Mode)
+
+```yaml
+type: custom:button-card
+entity: sensor.YOUR_SENSOR_NAME
+name: NOTIFICATIONS
+show_name: true
+show_icon: true
+show_state: false
+styles:
+  card:
+    - background-color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return entity.attributes.color_alert; }
+        else { return entity.attributes.color_clear; } ]]]
+    - border-radius: 10px
+    - padding: 6px 10px 10px 10px
+    - color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') === '0') { return entity.attributes.text_color_clear; }
+        else { return entity.attributes.text_color_alert; } ]]]
+    - white-space: normal
+    - font-size: 20px
+  name:
+    - font-weight: bold
+    - text-align: center
+    - font-size: 23px
+    - margin-top: 0
+  label:
+    - white-space: normal
+    - display: block
+    - max-width: 100%
+    - padding-top: 5px
+    - text-align: center
+  icon:
+    - color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') === '0') { return entity.attributes.icon_color_clear; }
+        else { return entity.attributes.icon_color_alert; } ]]]
+    - width: 70px
+    - height: 70px
+    - margin: 5px 0
+icon: >
+  [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return entity.attributes.icon_alert; } else {
+  return entity.attributes.icon_clear; } ]]]
+show_label: true
+label: >
+  [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return entity.attributes.alert_list.join(', '); } else { return entity.attributes.text_all_clear; } ]]]
+tap_action:
+  action: none
+hold_action:
+  action: none
+```
+
+---
+
+### Card 3 — Advanced Integration Colors with card-mod (Attribute Mode)
+
+```yaml
+type: custom:button-card
+entity: sensor.YOUR_SENSOR_NAME
+name: NOTIFICATIONS
+show_name: true
+show_icon: true
+show_state: false
+styles:
+  card:
+    - background-color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return
+        entity.attributes.color_alert; } else { return
+        entity.attributes.color_clear; } ]]]
+    - border-radius: 16px !important
+    - box-shadow: >
+        12px 12px 24px rgba(0, 0, 0, 0.5), -4px -4px 8px rgba(255, 255, 255,
+        0.1), inset -4px -4px 8px rgba(0, 0, 0, 0.2), inset 4px 4px 8px
+        rgba(255, 255, 255, 0.2) !important
+    - overflow: hidden !important
+    - padding: 6px 10px 10px 10px !important
+    - color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return
+        entity.attributes.text_color_alert; } else { return
+        entity.attributes.text_color_clear; } ]]]
+    - white-space: normal
+    - position: relative !important
+    - font-size: 20px
+  name:
+    - font-weight: bold
+    - text-align: center
+    - font-size: 23px
+    - margin-top: 0
+  label:
+    - white-space: normal
+    - display: block
+    - max-width: 100%
+    - padding-top: 5px
+    - text-align: center
+  icon:
+    - color: >
+        [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return
+        entity.attributes.icon_color_alert; } else { return
+        entity.attributes.icon_color_clear; } ]]]
+    - width: 70px
+    - height: 70px
+    - margin: 5px 0
+icon: >
+  [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return entity.attributes.icon_alert; }
+  else { return entity.attributes.icon_clear; } ]]]
+show_label: true
+label: >
+  [[[ if (states('sensor.YOUR_SENSOR_FAULT_COUNT') !== '0') { return entity.attributes.alert_list.join(', '); } else { return entity.attributes.text_all_clear; } ]]]
+tap_action:
+  action: none
+hold_action:
+  action: none
+card_mod:
+  style: |
+    ha-card::after {
+      content: '' !important;
+      position: absolute !important;
+      width: 100px !important;
+      height: 100% !important;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+      transform: skewX(-15deg) translateX(50px) !important;
+      top: 0 !important;
+      left: -20px !important;
+      z-index: 1 !important;
+    }
+```
+
+---
+
+## Attribute Mode — Automations
+
+### Automation 1 — First Alert (Attribute Mode)
+
+```yaml
+alias: Household Sensors — First Alert (Attribute Mode)
+trigger:
+  - platform: state
+    entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
+    from: "0"
+condition: []
+action:
+  # Fill in your action — examples: notify.mobile_app_your_phone, light.turn_on, alarm_control_panel.alarm_trigger
+  - action: notify.mobile_app_your_phone
+    data:
+      title: "Combined Notifications Alert"
+      message: "{{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}"
+```
+
+### Automation 2 — Additional Alerts (Increasing Number) (Attribute Mode)
+
+```yaml
+alias: Household Sensors — Additional Alerts (Attribute Mode)
+trigger:
+  - platform: state
+    entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.to_state.state | int > trigger.from_state.state | int
+         and trigger.from_state.state | int > 0 }}
+action:
+  # Fill in your action — examples: notify.mobile_app_your_phone, light.turn_on, alarm_control_panel.alarm_trigger
+  - action: notify.mobile_app_your_phone
+    data:
+      title: "Combined Notifications Alert"
+      message: "{{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}"
+```
+
+### Automation 3 — All Clear (Attribute Mode)
+
+```yaml
+alias: Household Sensors — All Clear (Attribute Mode)
+trigger:
+  - platform: state
+    entity_id: sensor.YOUR_SENSOR_FAULT_COUNT
+    to: "0"
+condition: []
+action:
+  # Fill in your action — examples: notify.mobile_app_your_phone, light.turn_on, alarm_control_panel.alarm_trigger
+  - action: notify.mobile_app_your_phone
+    data:
+      title: "Combined Notifications All Clear"
+      message: "{{ state_attr('sensor.YOUR_SENSOR_NAME', 'text_all_clear') }}"
+```
+
+---
+
+---
