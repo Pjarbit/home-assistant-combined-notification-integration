@@ -616,7 +616,7 @@ If the version shown in the panel does not match the version you just installed,
 
 ### Sensor State Truncated at 255 Characters
 
-Home Assistant has a hard limit of 255 characters on sensor states. If you monitor a large number of entities with long names, the sensor state may be truncated in the log. The integration continues to function correctly regardless — this is a display limitation only. A workaround is planned for a future release that will expose the full alert list as a sensor attribute.
+Home Assistant has a hard limit of 255 characters on sensor states. If you monitor a large number of entities with long names, the sensor state may be truncated in the log. The integration continues to function correctly regardless — this is a display limitation only. A workaround is included in this version. 7.1.2.  Its called attribute diaplay sensor and a full explanation is above in this readme file with coding examples below in the addendum. Be careful not to confuse the coding of "normal" cards and "attrubute coding" cards and automations.  The coding is almost the same although one looks for the sensor, the other looks for the attributes of the sensor.
 
 ---
 
@@ -638,7 +638,7 @@ If your configuration panel appears blank after clicking Configure,
   
 ---
 
-*Special thanks to David Wallis and Jason Bogart for their hard work and beta testing.*
+*Special thanks to David Wallis, Kaibob2(github) and Jason Bogart for their hard work, documentation of errors, and beta testing.*
 
 ---
 
