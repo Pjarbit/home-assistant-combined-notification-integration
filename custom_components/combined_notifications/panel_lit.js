@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v7.1.2
+ * Combined Notifications Panel v7.1.3
  * Style injection + force visibility fix for card-mod compatibility
  */
 
@@ -42,15 +42,15 @@ if (typeof css  !== "function") css  = (strings, ...values) => {
 };
 
 try {
-  console.log('%cCombined Notifications v7.1.2 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v7.1.3 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v7.1.2 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v7.1.3 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 7.1.2</p>
+      <p style="margin:8px 0">Version 7.1.3</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -163,9 +163,9 @@ const CN_STYLES = `
     height: 40px;
     padding: 0 14px;
     border-radius: 8px 8px 0 0;
-    border: 2px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.08);
     border-bottom: none;
-    background: rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, #2a2f38, #1e2228);
     color: #94a3b8;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.88rem;
@@ -178,14 +178,16 @@ const CN_STYLES = `
     align-items: center;
     gap: 5px;
     white-space: nowrap;
+    box-shadow: -2px -2px 5px rgba(255,255,255,0.06), 2px -2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
   }
-  .tab:hover { color: #e2e8f0; background: rgba(255,255,255,0.07); }
+  .tab:hover { color: #e2e8f0; background: linear-gradient(180deg, #323840, #252b33); }
   .tab.active {
-    background: #0f1219;
-    color: #63b3ed;
-    border-color: rgba(99,179,237,0.35);
-    border-bottom-color: #0f1219;
-    font-weight: 600;
+    background: linear-gradient(180deg, #5ab2e8, #2d7ab5);
+    color: #ffffff;
+    border-color: rgba(99,179,237,0.5);
+    border-bottom: none;
+    font-weight: 700;
+    box-shadow: -2px -2px 5px rgba(255,255,255,0.08), 2px -2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
   }
   .badge {
     display: inline-flex;
@@ -235,10 +237,11 @@ const CN_STYLES = `
   .panel-body::-webkit-scrollbar { width: 4px; }
   .panel-body::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 4px; }
   .group-card {
-    background: #161b26;
-    border: 2px solid rgba(99,179,237,0.2);
+    background: #2a2f38;
+    border: 1px solid rgba(255,255,255,0.06);
     border-radius: 12px;
     overflow: visible;
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
   }
   .group-header {
     padding: 14px 16px 0;
@@ -254,7 +257,7 @@ const CN_STYLES = `
     gap: 12px;
   }
   .field { display: flex; flex-direction: column; gap: 5px; }
-  .field label { font-size: 0.9rem; font-weight: 500; color: #94a3b8; }
+  .field label { font-size: 0.9rem; font-weight: 500; color: #cbd5e0; }
   .field input, .field select {
     width: 100%;
     padding: 9px 12px;
@@ -330,8 +333,8 @@ const CN_STYLES = `
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
-    background: #0d0f18;
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 8px;
   }
   .toggle-label { font-size: 0.9rem; color: #e2e8f0; }
@@ -433,14 +436,19 @@ const CN_STYLES = `
     padding: 3px 10px;
     border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.08);
-    background: transparent;
+    background: rgba(30,34,40,1);
     color: #64748b;
     font-size: 0.8rem;
     font-family: 'DM Sans', sans-serif;
     cursor: pointer;
     transition: all 0.15s;
+    box-shadow: 3px 3px 6px rgba(0,0,0,0.4), -1px -1px 3px rgba(255,255,255,0.04), inset 1px 1px 1px rgba(255,255,255,0.06);
   }
-  .delete-btn:hover { color: #fc8181; border-color: #fc8181; }
+  .delete-btn:hover {
+    color: #fc8181;
+    border-color: rgba(252,129,129,0.5);
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(0,0,0,0.3);
+  }
   .state-pill {
     display: inline-flex;
     align-items: center;
@@ -568,18 +576,25 @@ const CN_STYLES = `
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 14px;
-    background: transparent;
-    border: 1px dashed rgba(255,255,255,0.12);
+    padding: 10px 18px;
+    background: linear-gradient(145deg, #5ab2e8, #2d7ab5);
+    border: 1px solid rgba(77,159,212,0.6);
     border-radius: 8px;
-    color: #94a3b8;
+    color: #ffffff;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
     width: fit-content;
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.4), -2px -2px 4px rgba(255,255,255,0.05), inset 1px 1px 1px rgba(255,255,255,0.08);
   }
-  .add-btn:hover { border-color: #63b3ed; color: #63b3ed; background: rgba(99,179,237,0.04); }
+  .add-btn:hover {
+    background: linear-gradient(145deg, #6abff0, #3d8fc4);
+    border-color: rgba(77,159,212,0.8);
+    color: #fff;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(0,0,0,0.2);
+  }
   .plus {
     width: 20px; height: 20px;
     border-radius: 50%;
@@ -621,52 +636,80 @@ const CN_STYLES = `
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.4), -2px -2px 4px rgba(255,255,255,0.05), inset 1px 1px 1px rgba(255,255,255,0.08);
   }
-  .export-btn { background: rgba(99,179,237,0.15); border: 1px solid rgba(99,179,237,0.35); color: #63b3ed; }
-  .export-btn:hover { background: rgba(99,179,237,0.25); }
-  .import-btn { background: rgba(104,211,145,0.15); border: 1px solid rgba(104,211,145,0.35); color: #68d391; }
-  .import-btn:hover { background: rgba(104,211,145,0.25); }
+  .backup-btn:hover {
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(0,0,0,0.2);
+  }
+  .export-btn { background: linear-gradient(145deg, #5ab2e8, #2d7ab5); border: 1px solid rgba(77,159,212,0.6); color: #ffffff; font-weight: 700; }
+  .export-btn:hover { background: linear-gradient(145deg, #6abff0, #3d8fc4); color: #fff; }
+  .import-btn { background: linear-gradient(145deg, #5ab2e8, #2d7ab5); border: 1px solid rgba(77,159,212,0.6); color: #ffffff; font-weight: 700; }
+  .import-btn:hover { background: linear-gradient(145deg, #6abff0, #3d8fc4); color: #fff; }
   .backup-msg { font-size: 0.82rem; color: #68d391; font-family: monospace; margin-top: 4px; }
   .footer-buttons { display: flex; gap: 10px; margin-left: auto; }
   .btn-cancel {
     padding: 9px 18px;
     border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(145deg, #2a2f38, #1e2228);
     color: #94a3b8;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.15s;
+    box-shadow: 6px 6px 12px rgba(0,0,0,0.6), -3px -3px 6px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.2);
   }
-  .btn-cancel:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+  .btn-cancel:hover {
+    color: #e2e8f0;
+    box-shadow: 3px 3px 6px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(0,0,0,0.3);
+  }
+  .btn-cancel:active {
+    box-shadow: inset 3px 3px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(255,255,255,0.05);
+    transform: translateY(1px);
+  }
   .btn-save {
     padding: 9px 22px;
     border-radius: 8px;
     border: none;
-    background: #63b3ed;
-    color: #080a0f;
+    background: linear-gradient(145deg, #5ab2e8, #2d7ab5);
+    color: #fff;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 2px 12px rgba(99,179,237,0.3);
     transition: all 0.15s;
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
   }
-  .btn-save:hover { background: #90cdf4; }
+  .btn-save:hover {
+    background: linear-gradient(145deg, #6abff0, #3d8fc4);
+    box-shadow: 6px 6px 12px rgba(0,0,0,0.5), -2px -2px 4px rgba(255,255,255,0.08), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.15);
+  }
+  .btn-save:active {
+    box-shadow: inset 3px 3px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(255,255,255,0.1);
+    transform: translateY(1px);
+  }
   .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-close {
     padding: 9px 18px;
     border-radius: 8px;
-    border: 1px solid rgba(99,179,237,0.3);
-    background: transparent;
-    color: #63b3ed;
+    border: 1px solid rgba(77,159,212,0.3);
+    background: linear-gradient(145deg, #2a2f38, #1e2228);
+    color: #4d9fd4;
     font-family: 'DM Sans', sans-serif;
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.15s;
+    box-shadow: 6px 6px 12px rgba(0,0,0,0.6), -3px -3px 6px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.2);
   }
-  .btn-close:hover { background: rgba(99,179,237,0.1); }
+  .btn-close:hover {
+    color: #fff;
+    border-color: rgba(77,159,212,0.6);
+    box-shadow: 3px 3px 6px rgba(0,0,0,0.6), inset 2px 2px 5px rgba(0,0,0,0.3);
+  }
+  .btn-close:active {
+    box-shadow: inset 3px 3px 8px rgba(0,0,0,0.4), inset -1px -1px 4px rgba(255,255,255,0.05);
+    transform: translateY(1px);
+  }
   .domain-filter { display: flex; flex-direction: column; gap: 6px; }
   .domain-filter-label { font-size: 0.82rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; }
   .domain-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -770,9 +813,10 @@ const CN_STYLES = `
     display: flex;
     gap: 16px;
     padding: 10px 14px;
-    background: #161b26;
-    border: 2px solid rgba(99,179,237,0.2);
+    background: #2a2f38;
+    border: 1px solid rgba(255,255,255,0.06);
     border-radius: 10px;
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
     font-size: 0.8rem;
     font-family: 'DM Sans', sans-serif;
     color: #94a3b8;
@@ -791,9 +835,10 @@ const CN_STYLES = `
   .overview-scroll-wrap::-webkit-scrollbar { width: 4px; }
   .overview-scroll-wrap::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 4px; }
   .overview-container {
-    background: #161b26;
-    border: 2px solid rgba(99,179,237,0.2);
+    background: #2a2f38;
+    border: 1px solid rgba(255,255,255,0.06);
     border-radius: 12px;
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
     overflow-y: auto;
     max-height: calc(68vh - 130px);
   }
@@ -1684,7 +1729,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v7.1.2</span>
+            <span class="version-stamp">pja v7.1.3</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1761,7 +1806,7 @@ class CombinedNotificationsPanel extends LitElement {
                   this._set("name", clean);
                 }}">
               ${this._isExistingSensor && !this._renaming ? html`
-                <button class="backup-btn export-btn" style="white-space:nowrap" @click="${() => { this._showRenameWarning = true; this.requestUpdate(); }}">✎ Rename</button>
+                <button class="backup-btn export-btn" style="white-space:nowrap;color:#ffffff;font-weight:700;" @click="${() => { this._showRenameWarning = true; this.requestUpdate(); }}">✎ Rename</button>
               ` : ""}
             </div>
             <div class="hint"><em>Your sensor will be created as: <span class="mono accent">${"sensor." + (c.name || "")}</span></em></div>
