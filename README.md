@@ -91,8 +91,7 @@ If you are a standard user, do not select it. If you are a power user with many 
 {{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}
 ```
 
-> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README.  **Changing an existing sensor from stantard to attribute mode or back will require a home assistant restart to register this change.**
-
+> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README. Changing an existing sensor from standard to attribute mode or back will take effect immediately after saving — no Home Assistant restart required.(The same for going back from attributes to sensor, you will have to redo your automations and dashboard cards)
 
 ---
 
@@ -263,7 +262,6 @@ badge_icon: |
 ```
 
 ---
-
 
 ## 🤖 Automations — One Sensor, One Trigger, Unlimited Actions
 
@@ -459,7 +457,7 @@ hold_action:
 ![All Clear](media/card_all_clear.png)
 ![Alert](media/card_alert.png)
 
-This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod). The card-mod section adds a light reflection effect for a polished appearance. The card-mod section adds a light reflection effect for a polished appearance.
+This is the version I use. Requires [button-card](https://github.com/custom-cards/button-card) and [card-mod](https://github.com/thomasloven/lovelace-card-mod). The card-mod section adds a light reflection effect for a polished appearance.
 
 Only one line needs to change — replace `sensor.YOUR_SENSOR_NAME` with your sensor. Paste into a Manual card in your dashboard.
 
@@ -594,9 +592,6 @@ If your configuration panel appears blank after clicking Configure, this is usua
 
 Note: Compatibility mode disables real-time entity status in the panel view only. The integration itself still runs in real time, and a refresh button is available to see live status. All other configuration and functions remain available and unchanged.
 
-Special thanks to David Wallis and Jason Bogart for their hard work and beta testing.
-
----
 
 ### Panel Version Does Not Match After Update
 
@@ -616,7 +611,7 @@ If the version shown in the panel does not match the version you just installed,
 
 ### Sensor State Truncated at 255 Characters
 
-Home Assistant has a hard limit of 255 characters on sensor states. If you monitor a large number of entities with long names, the sensor state may be truncated in the log. The integration continues to function correctly regardless — this is a display limitation only. A workaround is included in this version. 7.1.2.  Its called attribute diaplay sensor and a full explanation is above in this readme file with coding examples below in the addendum. Be careful not to confuse the coding of "normal" cards and "attrubute coding" cards and automations.  The coding is almost the same although one looks for the sensor, the other looks for the attributes of the sensor.
+Home Assistant has a hard limit of 255 characters on sensor states. If you monitor a large number of entities with long names, the sensor state may be truncated in the log. The integration continues to function correctly regardless — this is a display limitation only. A workaround is included as of version 7.1.2. It's called the Attribute Display Sensor and a full explanation is above in this readme file with coding examples below in the addendum. Be careful not to confuse the coding of "normal" cards and "attribute coding" cards and automations. The coding is almost the same although one looks for the sensor, the other looks for the attributes of the sensor.
 
 ---
 
@@ -624,24 +619,23 @@ Home Assistant has a hard limit of 255 characters on sensor states. If you monit
 
 Combined Notifications may work with card-mod installed, it may not. Some users will experience a blank screen when opening the configuration panel. Combined Notifications may not be compatible with card-mod's older deprecated code on your system. Card-mod does not play well with current Home Assistant LitElements (design features) that were brought into HA as recent coding protocols.
 
-This is a known conflict between newer integrations and card-mod. 
+This is a known conflict between newer integrations and card-mod.
 
-If your configuration panel appears blank after clicking Configure, 
-  Close the blank panel, 
-  Go to **Settings → Integrations**, 
+If your configuration panel appears blank after clicking Configure,
+  Close the blank panel,
+  Go to **Settings → Integrations**,
   find **Combined Notifications**,
-  Click the **gear icon** on the integration card. 
+  Click the **gear icon** on the integration card.
   You'll see a checkbox labeled **"Enable compatibility mode (HTML panel)"** — check it
-  **Hit Save.** Home Assistant will automatically reload the integration and switch to an alternate panel that works on these affected (blank screen) systems. 
+  **Hit Save.** Home Assistant will automatically reload the integration and switch to an alternate panel that works on these affected (blank screen) systems.
 
-  **Note:** Compatability mode disables real time entity status IN THE PANEL VIEW ONLY (The integration is still in real time and there is a new refresh button to see the live status) Ever other configuration and function remain available and unchanged.
-  
+  **Note:** Compatibility mode disables real time entity status IN THE PANEL VIEW ONLY (The integration is still in real time and there is a new refresh button to see the live status) Every other configuration and function remain available and unchanged.
+
 ---
 
 *Special thanks to David Wallis, Kaibob2(github) and Jason Bogart for their hard work, documentation of errors, and beta testing.*
 
 ---
-
 
 ## 💬 A Note from the Developer
 
