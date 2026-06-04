@@ -84,6 +84,10 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                 self.config_entry,
                 options={"compatibility_mode": compatibility_mode, "use_attributes": use_attributes},
             )
+            # Reload the entry so changes take effect immediately without HA restart
+            self.hass.async_create_task(
+                self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            )
             # Open the correct panel
             panel_url = f"/combined-notifications-{self.config_entry.entry_id}"
             return self.async_external_step(url=panel_url)
