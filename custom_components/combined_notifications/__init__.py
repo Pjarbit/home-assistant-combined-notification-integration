@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 7.1.0
+# Integration version: 7.1.3
 import logging
 import os
 import time
@@ -170,6 +170,7 @@ async def websocket_get_config(hass, connection, msg):
 
     connection.send_result(msg["id"], {
         "config": dict(entry.data),
+        "options": dict(entry.options),
         "states": {}
     })
 
