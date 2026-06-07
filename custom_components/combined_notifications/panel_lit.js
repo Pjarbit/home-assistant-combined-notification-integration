@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v7.1.3
+ * Combined Notifications Panel v7.1.5
  * Style injection + force visibility fix for card-mod compatibility
  */
 
@@ -78,7 +78,7 @@ const CN_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   .panel-root {
     min-height: 100vh;
-    background: #080a0f;
+    background: var(--primary-background-color, #111);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -89,7 +89,7 @@ const CN_STYLES = `
   .dialog {
     width: 560px;
     max-width: 100%;
-    background: #0f1219;
+    background: var(--primary-background-color, #111);
     border-radius: 16px;
     box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
     overflow: hidden;
@@ -237,11 +237,11 @@ const CN_STYLES = `
   .panel-body::-webkit-scrollbar { width: 4px; }
   .panel-body::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 4px; }
   .group-card {
-    background: #2a2f38;
+    background: var(--card-background-color, #2a2f38);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 12px;
     overflow: visible;
-    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.07), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.08);
   }
   .group-header {
     padding: 14px 16px 0;
@@ -296,6 +296,15 @@ const CN_STYLES = `
   .icon-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .icon-field { display: flex; flex-direction: column; gap: 5px; }
   .icon-field label { font-size: 0.9rem; font-weight: 500; color: #94a3b8; }
+  .icon-field ha-icon-picker {
+    --card-background-color: #0d0f18;
+    --primary-background-color: #0d0f18;
+    --input-fill-color: #0d0f18;
+    --mdc-text-field-fill-color: #0d0f18;
+    --mdc-text-field-ink-color: #e2e8f0;
+    background: #0d0f18;
+    border-radius: 8px;
+  }
   .color-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .color-field { display: flex; flex-direction: column; gap: 5px; }
   .color-field label { font-size: 0.85rem; color: #94a3b8; }
@@ -333,8 +342,8 @@ const CN_STYLES = `
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: #0d0f18;
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
   }
   .toggle-label { font-size: 0.9rem; color: #e2e8f0; }
@@ -678,7 +687,7 @@ const CN_STYLES = `
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s;
-    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.07), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.08);
   }
   .btn-save:hover {
     background: linear-gradient(145deg, #6abff0, #3d8fc4);
@@ -813,10 +822,10 @@ const CN_STYLES = `
     display: flex;
     gap: 16px;
     padding: 10px 14px;
-    background: #2a2f38;
+    background: var(--card-background-color, #2a2f38);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 10px;
-    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.07), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.08);
     font-size: 0.8rem;
     font-family: 'DM Sans', sans-serif;
     color: #94a3b8;
@@ -835,10 +844,10 @@ const CN_STYLES = `
   .overview-scroll-wrap::-webkit-scrollbar { width: 4px; }
   .overview-scroll-wrap::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 4px; }
   .overview-container {
-    background: #2a2f38;
+    background: var(--card-background-color, #2a2f38);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 12px;
-    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.1), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.2);
+    box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.07), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.08);
     overflow-y: auto;
     max-height: calc(68vh - 130px);
   }
@@ -1729,7 +1738,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v7.1.3</span>
+            <span class="version-stamp">pja v7.1.5</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1909,14 +1918,16 @@ class CombinedNotificationsPanel extends LitElement {
       <div class="group-card">
         <div class="group-header">Backup & Restore</div>
         <div class="group-body">
-          <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor with the same name, open its panel, and import the backup file.</em></div>
-          <div class="backup-row">
-            <button class="backup-btn export-btn" @click="${this._exportBackup}">⬇ Export Sensor</button>
-            <button class="backup-btn import-btn" @click="${this._triggerImport}">⬆ Import Sensor</button>
-            <input type="file" id="backup-file-input" accept=".json" style="display:none"
-              @change="${this._importBackup}">
+          <div style="background:#0d0f18;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+            <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor with the same name, open its panel, and import the backup file.</em></div>
+            <div class="backup-row">
+              <button class="backup-btn export-btn" @click="${this._exportBackup}">⬇ Export Sensor</button>
+              <button class="backup-btn import-btn" @click="${this._triggerImport}">⬆ Import Sensor</button>
+              <input type="file" id="backup-file-input" accept=".json" style="display:none"
+                @change="${this._importBackup}">
+            </div>
+            ${this._backupMsg ? html`<div class="backup-msg">${this._backupMsg}</div>` : ""}
           </div>
-          ${this._backupMsg ? html`<div class="backup-msg">${this._backupMsg}</div>` : ""}
         </div>
       </div>
     `;
