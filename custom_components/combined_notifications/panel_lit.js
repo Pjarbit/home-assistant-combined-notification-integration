@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v7.1.5
+ * Combined Notifications Panel v7.2.0
  * Style injection + force visibility fix for card-mod compatibility
  */
 
@@ -42,15 +42,15 @@ if (typeof css  !== "function") css  = (strings, ...values) => {
 };
 
 try {
-  console.log('%cCombined Notifications v7.1.3 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v7.2.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v7.1.3 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v7.2.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 7.1.3</p>
+      <p style="margin:8px 0">Version 7.2.0</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -850,6 +850,7 @@ const CN_STYLES = `
     box-shadow: 12px 12px 24px rgba(0,0,0,0.5), -4px -4px 8px rgba(255,255,255,0.07), inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 8px rgba(255,255,255,0.08);
     overflow-y: auto;
     max-height: calc(68vh - 130px);
+    padding: 4px 0;
   }
   .overview-domain-divider {
     padding: 6px 14px;
@@ -872,7 +873,7 @@ const CN_STYLES = `
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #475569;
+    color: #94a3b8;
     font-family: 'DM Sans', sans-serif;
     border-bottom: 1px solid rgba(255,255,255,0.05);
   }
@@ -883,13 +884,17 @@ const CN_STYLES = `
     padding: 9px 14px;
     border-bottom: 1px solid rgba(255,255,255,0.04);
     gap: 8px;
+    background: #0d0f18;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    margin: 10px 8px;
   }
   .overview-row:last-child { border-bottom: none; }
-  .overview-row.row-alert  { background: rgba(252,129,129,0.06); border-left: 3px solid rgba(252,129,129,0.6); padding-left: 11px; }
-  .overview-row.row-paused { background: rgba(246,173,85,0.06);  border-left: 3px solid rgba(246,173,85,0.5);  padding-left: 11px; }
-  .overview-row.row-ok     { background: transparent; }
+  .overview-row.row-alert  { background: rgba(252,129,129,0.06); border-color: rgba(252,129,129,0.4); border-left: 3px solid rgba(252,129,129,0.6); padding-left: 11px; }
+  .overview-row.row-paused { background: rgba(246,173,85,0.06);  border-color: rgba(246,173,85,0.4);  border-left: 3px solid rgba(246,173,85,0.5);  padding-left: 11px; }
+  .overview-row.row-ok     { background: #0d0f18; }
   .overview-entity-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .overview-entity-name { font-size: 0.88rem; font-weight: 500; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .overview-entity-name { font-size: 0.88rem; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .overview-row.row-alert  .overview-entity-name { color: #fc8181; }
   .overview-row.row-paused .overview-entity-name { color: #f6ad55; }
   .overview-source-pill {
@@ -910,10 +915,10 @@ const CN_STYLES = `
   }
   .overview-source-type { color: #63b3ed; font-weight: 700; }
   .overview-source-name { color: #94a3b8; }
-  .overview-state { font-size: 0.78rem; font-family: monospace; color: #68d391; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .overview-state { font-size: 0.78rem; font-family: monospace; color: #68d391; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
   .overview-row.row-alert  .overview-state { color: #fc8181; }
   .overview-row.row-paused .overview-state { color: #f6ad55; }
-  .overview-condition { font-size: 0.78rem; font-family: monospace; color: #94a3b8; white-space: nowrap; }
+  .overview-condition { font-size: 0.78rem; font-family: monospace; color: #e2e8f0; white-space: nowrap; font-weight: 600; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -1235,6 +1240,9 @@ class CombinedNotificationsPanel extends LitElement {
         name: "",
         paused: false,
         and_conditions: [],
+        use_label_template: false,
+        label_template: "",
+        label_fallback: "",
       });
     }
     this._config = { ...this._config, conditions };
@@ -1738,7 +1746,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v7.1.5</span>
+            <span class="version-stamp">pja v7.2.0</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -2102,8 +2110,35 @@ class CombinedNotificationsPanel extends LitElement {
             <div class="field">
               <label>Condition Label <span class="optional">— shown in sensor state when triggered</span></label>
               <input type="text" .value="${condition.name || ""}"
+                ?disabled="${condition.use_label_template || false}"
+                style="${condition.use_label_template ? 'opacity:0.4;cursor:not-allowed;' : ''}"
                 @input="${e => this._setCondition(index, "name", e.target.value)}">
             </div>
+            <div class="toggle-row" style="margin-top:4px;">
+              <div>
+                <div class="toggle-label" style="font-size:0.85rem;">Use Jinja2 template for label</div>
+                <div class="toggle-sub">Dynamically include live sensor values in the alert — e.g. Lightning detected — 5 miles away</div>
+              </div>
+              <div class="toggle ${condition.use_label_template ? 'on' : ''}"
+                @click="${() => this._setCondition(index, 'use_label_template', !condition.use_label_template)}">
+              </div>
+            </div>
+            ${condition.use_label_template ? html`
+              <div class="field">
+                <label>Jinja2 Template</label>
+                <input type="text" .value="${condition.label_template || ""}"
+                  placeholder="e.g. Lightning detected — {{ states('sensor.lightning_distance') }} miles away"
+                  @input="${e => this._setCondition(index, "label_template", e.target.value)}">
+                <div class="hint"><em>Use {{ states('sensor.entity_id') }} to insert live values. Full Jinja2 supported.</em></div>
+              </div>
+              <div class="field">
+                <label>Fallback Label <span class="optional">— shown if template fails</span></label>
+                <input type="text" .value="${condition.label_fallback || ""}"
+                  placeholder="e.g. Lightning Detected"
+                  @input="${e => this._setCondition(index, "label_fallback", e.target.value)}">
+                <div class="hint"><em>Displayed if the template renders an error or a sensor is unavailable.</em></div>
+              </div>
+            ` : ""}
             ${this._renderAndSection(condition, index)}
           </div>
         ` : ""}
