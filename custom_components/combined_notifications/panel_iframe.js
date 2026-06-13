@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v7.2.1
+ * Combined Notifications Panel v7.2.2
  * Vanilla JS — iframe REST API approach
- * pja 7.2.1
+ * pja 7.2.2
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "7.2.1";
+const VERSION = "7.2.2";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -451,7 +451,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 7.2.1</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 7.2.2</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -730,8 +730,8 @@ function buildConditionCard(condition, index) {
             <div class="mini-toggle ${condition.use_label_template ? '' : 'off'}" data-action="toggle-label-template" data-index="${index}"></div>
           </div>
           ${condition.use_label_template ? `
-            ${buildField("Jinja2 Template", `<input class="cond-label-template" data-index="${index}" type="text" value="${esc(condition.label_template || ''')}" placeholder="e.g. Lightning detected — {{ states('sensor.lightning_distance') }} miles away" style="${inputStyle()}">
-              <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">ⓘ Use {{ states('sensor.entity_id') }} to insert live values.</div>`)}
+            ${buildField("Jinja2 Template", `<textarea class="cond-label-template" data-index="${index}" rows="4" placeholder="e.g. multi-line:&#10;{% set d = states('sensor.lightning_distance') %}&#10;Lightning {{ d }} miles away" style="width:100%;padding:9px 12px;background:#0d0f18;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-family:monospace;font-size:0.85rem;outline:none;resize:vertical;line-height:1.5;">${esc(condition.label_template || '')}</textarea>
+              <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">ⓘ Use {{ states('sensor.entity_id') }} to insert live values. Full Jinja2 supported — multiple lines allowed. Example: Lightning {{ states('sensor.lightning_distance') }} miles away</div>`)}
             ${buildField("Fallback Label <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>— shown if template fails</span>", `<input class="cond-label-fallback" data-index="${index}" type="text" value="${esc(condition.label_fallback || '')}" placeholder="e.g. Lightning Detected" style="${inputStyle()}">
               <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">ⓘ Displayed if the template renders an error or sensor is unavailable.</div>`)}
           ` : ""}
@@ -1425,7 +1425,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v7.2.1 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v7.2.2 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
