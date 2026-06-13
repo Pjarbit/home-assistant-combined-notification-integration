@@ -196,8 +196,12 @@ Using the Blitzortung integration, this condition alerts when lightning strikes 
 **Template:**
 
 ```jinja2
-{% set dirs = ['North','Northeast','East','Southeast','South','Southwest','West','Northwest'] %}{% set mi = states('sensor.home_lightning_distance') | float | round(0, 'ceil') | int %}Lightning {{ mi }} Mile{{ 's' if mi != 1 else '' }} {{ dirs[(((states('sensor.home_lightning_azimuth') | float) + 22.5) // 45) | int % 8] }}
+{% set dirs = ['North','Northeast','East','Southeast','South','Southwest','West','Northwest'] %}
+{% set mi = states('sensor.home_lightning_distance') | float | round(0, 'ceil') | int %}
+Lightning {{ mi }} Mile{{ 's' if mi != 1 else '' }} {{ dirs[(((states('sensor.home_lightning_azimuth') | float) + 22.5) // 45) | int % 8] }}
 ```
+
+The template field accepts multiple lines, so you can format it like this for readability — or paste it all on one line. Both render identically.
 
 **Fallback:** `Lightning Detected`
 
