@@ -1,4 +1,4 @@
-# Combined Notifications for Home Assistant — v7.x.x
+# Combined Notifications for Home Assistant — v8.x.x
 
 ![Combined Notifications](media/logonew.png)
 
@@ -22,15 +22,16 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one sen
 
 ## 📋 Table of Contents
 
-- [Features and What's New in Version 7.x.x](#-features-and-whats-new-in-version-7xx)
-- [What's New in Version 7.x.x](#-features-and-whats-new-in-version-7xx)
-- [Upgrading from v4](#️-upgrading-from-v4-to-v7xx)
+- [Features and What's New in Version 8.x.x](#-features-and-whats-new-in-version-8xx)
+- [What's New in Version 8.x.x](#-features-and-whats-new-in-version-8xx)
+- [Upgrading from v4](#️-upgrading-from-v4)
 - [Installation](#-installation)
 - [Setup](#️-setup)
 - [Configuration Panel](#️-configuration-panel)
   - [General Tab](#general-tab)
   - [Conditions Tab](#conditions-tab--overview)
   - [Individual Conditions](#individual-conditions--expanded)
+  - [Dynamic Labels — Live Values in Your Alerts](#-dynamic-labels--live-values-in-your-alerts)
   - [Smart Groups](#smart-groups--expanded)
   - [Attributes Sensor Option](#-attributes-sensor-option)
 - [Sensor Behavior](#-sensor-behavior)
@@ -54,7 +55,9 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one sen
 
 ---
 
-## ✅ Features and What's New in Version 7.x.x
+## ✅ Features and What's New in Version 8.x.x
+
+**Version 8.x.x — Dynamic Labels.** Condition labels can now pull live sensor data into your alerts using Jinja2 templates — show the actual lightning distance, battery percentage, or package count right in the alert text. See **[Dynamic Labels](#-dynamic-labels--live-values-in-your-alerts)** below.
 
 **Version 7.x.x — Rebuilt from the ground up with all new features and functions**
 
@@ -71,6 +74,7 @@ No entity IDs. Just the **custom names you** gave your devices. All on **one sen
 - Smart Groups — type a keyword and bulk add every matching entity 🆕
 - "AND" conditions — is the car unlocked AND not in the garage? Is the back door open AND nobody is home? Now you can get an alert when both conditions meet your alert needs 🆕
 - Pause conditions without deleting them 🆕
+- **Dynamic Labels** — custom alert status lines that pull in live sensor data using Jinja2 templates. Instead of a static "Lightning Detected," show **"Lightning 5 Miles North"** with the real distance and direction 🆕
 - **Alert Count** sensor created automatically alongside every sensor you make 🆕
 - Still ONE sensor, ONE card 🆕
 
@@ -91,13 +95,13 @@ If you are a standard user, do not select it. If you are a power user with many 
 {{ state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') | join(', ') }}
 ```
 
-> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README. Changing an existing sensor from standard to attribute mode or back will take effect immediately after saving — no Home Assistant restart required.(The same for going back from attributes to sensor, you will have to redo your automations and dashboard cards)
+> ⚠️ **BREAKING CHANGE:** If you enable Attribute Mode, your existing dashboard cards and automations **will break**. You must update them to reference `alert_list` attribute instead of the sensor state directly. Complete card and automation examples are provided in the **[Addendum — Attribute Mode Examples](#️-attribute-mode-users-only--dashboard-cards--automations)** at the bottom of this README. **Changing an existing sensor from standard to attribute mode or back will take effect immediately after saving — no Home Assistant restart required.**
 
 ---
 
-## ⬆️ Upgrading from v4 to v7.x.x
+## ⬆️ Upgrading from v4
 
-Moving from v4 to v7.x.x should be seamless. Your existing sensors should carry over to the new version without any issues.
+Moving from v4 should be seamless. Your existing sensors should carry over to the new version without any issues.
 
 Use caution before upgrading. Going back to v4 will not be easy. This upgrade is not downgradable without rebuilding all your sensors from scratch. Make a backup of your Home Assistant configuration before updating, just in case you want to go back.
 
@@ -169,6 +173,43 @@ Click any condition to expand it and configure the entity, alert rule, label, an
 Look at the configuration panel — it shows the current state of your entity right there. That should give you a strong indication of exactly what value to use.
 
 Alert Value: `""` = blank. Other values do NOT use quotes.
+
+---
+
+### ⚡ Dynamic Labels — Live Values in Your Alerts
+
+Normally a condition's label is fixed text — "Lightning Detected," "Front Door Open." **Dynamic Labels** let that label pull in live data from your sensors at the moment the alert fires, using Jinja2 templates.
+
+Expand any individual condition and toggle on **Use Jinja2 template for label**. Two fields appear:
+
+- **Jinja2 Template** — the template that renders your live alert text. Multiple lines are supported.
+- **Fallback Label** — plain text shown if the template hits an error or a sensor is unavailable.
+
+When the toggle is on, the plain label field is disabled — the template takes over.
+
+#### Example — Lightning distance and direction
+
+Using the Blitzortung integration, this condition alerts when lightning strikes within 10 miles and shows exactly how far and which direction:
+
+**Condition:** `sensor.home_lightning_distance` · less than · `10`
+
+**Template:**
+
+```jinja2
+{% set dirs = ['North','Northeast','East','Southeast','South','Southwest','West','Northwest'] %}{% set mi = states('sensor.home_lightning_distance') | float | round(0, 'ceil') | int %}Lightning {{ mi }} Mile{{ 's' if mi != 1 else '' }} {{ dirs[(((states('sensor.home_lightning_azimuth') | float) + 22.5) // 45) | int % 8] }}
+```
+
+**Fallback:** `Lightning Detected`
+
+This renders **"Lightning 5 Miles North"**, handles the singular "1 Mile," rounds up so it never shows "0 Miles," and converts the azimuth degrees into a compass direction. When the storm passes and the distance sensor returns to `unknown`, the alert clears on its own.
+
+#### Other ideas
+
+- Battery: `Phone battery low: {{ states('sensor.phone_battery') }}%`
+- Packages: `{{ states('input_number.package_count_front') | int }} packages at the front door`
+- Any numeric sensor can contribute its real value to the alert text.
+
+> ⚠️ **Heads up on the 255-character limit:** Dynamic Labels produce longer alert text than static labels. If you use several at once, the combined sensor state can hit Home Assistant's 255-character limit. Pair Dynamic Labels with **[Attribute Mode](#-attributes-sensor-option)** to move the full alert list into an attribute with no length limit.
 
 ---
 
