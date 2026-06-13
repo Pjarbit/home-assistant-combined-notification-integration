@@ -347,10 +347,19 @@ class CombinedNotificationSensor(Entity):
 
             operator = condition.get("operator", "==")
             trigger_value = condition.get("trigger_value", "")
-            label = condition.get("name", "").strip()
-            if not label:
-                state_obj2 = self._hass.states.get(entity_id)
-                label = state_obj2.attributes.get("friendly_name", entity_id) if state_obj2 else entity_id
+
+            # Resolve label — supports Jinja2 templates
+            use_template = condition.get("use_label_template", False)
+            if use_template and condition.get("label_template", "").strip():
+                label = await self._render_label_template(
+                    condition["label_template"],
+                    condition.get("label_fallback", "").strip() or condition.get("name", "").strip() or entity_id
+                )
+            else:
+                label = condition.get("name", "").strip()
+                if not label:
+                    state_obj2 = self._hass.states.get(entity_id)
+                    label = state_obj2.attributes.get("friendly_name", entity_id) if state_obj2 else entity_id
 
             if not self._evaluate(actual, trigger_value, operator):
                 continue
@@ -412,6 +421,17 @@ class CombinedNotificationSensor(Entity):
         )
         if hasattr(self, "_count_sensor"):
             self._count_sensor.async_schedule_update_ha_state()
+
+    async def _render_label_template(self, template_str: str, fallback: str) -> str:
+        """Render a Jinja2 label template, returning fallback on any error."""
+        try:
+            from homeassistant.helpers.template import Template
+            tmpl = Template(template_str, self._hass)
+            result = tmpl.async_render()
+            return str(result).strip() if result is not None else fallback
+        except Exception as err:
+            _LOGGER.debug("Label template render failed: %s — using fallback: %s", err, fallback)
+            return fallback
 
     # ── Condition evaluator ───────────────────────────────────────────────
 
