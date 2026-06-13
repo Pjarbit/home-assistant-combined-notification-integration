@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v7.1.5
+ * Combined Notifications Panel v7.2.0
  * Vanilla JS — iframe REST API approach
- * pja 7.1.5
+ * pja 7.2.0
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "7.1.5";
+const VERSION = "7.2.0";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -451,7 +451,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 7.1.5</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 7.2.0</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -721,7 +721,20 @@ function buildConditionCard(condition, index) {
             </div>
           </div>
           <div style="font-size:0.82rem;color:#ffd701;"><em>ⓘ Must match exactly. Common values: on · off · open · closed · locked · unlocked · home · away</em></div>
-          ${buildField("Condition Label <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>— shown in sensor state when triggered</span>", `<input class="cond-name" data-index="${index}" type="text" value="${esc(condition.name || "")}" style="${inputStyle()}">`)}
+          ${buildField("Condition Label <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>— shown in sensor state when triggered</span>", `<input class="cond-name" data-index="${index}" type="text" value="${esc(condition.name || "")}" ${condition.use_label_template ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : `style="${inputStyle()}"` }>`)}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#0d0f18;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin-top:4px;">
+            <div>
+              <div style="font-size:0.85rem;color:#e2e8f0;font-weight:500;">Use Jinja2 template for label</div>
+              <div style="font-size:0.78rem;color:#94a3b8;margin-top:2px;">Dynamically include live sensor values — e.g. Lightning detected — 5 miles away</div>
+            </div>
+            <div class="mini-toggle ${condition.use_label_template ? '' : 'off'}" data-action="toggle-label-template" data-index="${index}"></div>
+          </div>
+          ${condition.use_label_template ? `
+            ${buildField("Jinja2 Template", `<input class="cond-label-template" data-index="${index}" type="text" value="${esc(condition.label_template || ''')}" placeholder="e.g. Lightning detected — {{ states('sensor.lightning_distance') }} miles away" style="${inputStyle()}">
+              <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">ⓘ Use {{ states('sensor.entity_id') }} to insert live values.</div>`)}
+            ${buildField("Fallback Label <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>— shown if template fails</span>", `<input class="cond-label-fallback" data-index="${index}" type="text" value="${esc(condition.label_fallback || '')}" placeholder="e.g. Lightning Detected" style="${inputStyle()}">
+              <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">ⓘ Displayed if the template renders an error or sensor is unavailable.</div>`)}
+          ` : ""}
           ${buildAndSection(condition, index)}
         </div>
       ` : ""}
@@ -980,6 +993,17 @@ function attachEvents() {
     });
   });
 
+  app.querySelectorAll("[data-action='toggle-label-template']").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const index = parseInt(el.dataset.index);
+      const conditions = [..._config.conditions];
+      conditions[index] = { ...conditions[index], use_label_template: !conditions[index].use_label_template };
+      _config = { ..._config, conditions };
+      render();
+    });
+  });
+
   app.querySelectorAll(".pause-toggle").forEach(el => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1007,7 +1031,7 @@ function attachEvents() {
   if (addIndividual) addIndividual.addEventListener("click", () => {
     const conditions = [..._config.conditions];
     const newIndex = conditions.length;
-    conditions.push({ entity_id: "", operator: "equals", trigger_value: "", name: "", paused: false, and_conditions: [] });
+    conditions.push({ entity_id: "", operator: "equals", trigger_value: "", name: "", paused: false, and_conditions: [], use_label_template: false, label_template: "", label_fallback: "" });
     _config = { ..._config, conditions };
     _expandedConditions.add(newIndex);
     render();
@@ -1276,6 +1300,14 @@ function collectAndSave() {
     const index = parseInt(input.dataset.index);
     if (conditions[index]) conditions[index] = { ...conditions[index], name: input.value };
   });
+  app.querySelectorAll(".cond-label-template").forEach(input => {
+    const index = parseInt(input.dataset.index);
+    if (conditions[index]) conditions[index] = { ...conditions[index], label_template: input.value };
+  });
+  app.querySelectorAll(".cond-label-fallback").forEach(input => {
+    const index = parseInt(input.dataset.index);
+    if (conditions[index]) conditions[index] = { ...conditions[index], label_fallback: input.value };
+  });
   app.querySelectorAll(".sg-keyword").forEach(input => {
     const index = parseInt(input.dataset.index);
     if (conditions[index]) conditions[index] = { ...conditions[index], entity_filter: input.value };
@@ -1393,7 +1425,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v7.1.5 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v7.2.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
