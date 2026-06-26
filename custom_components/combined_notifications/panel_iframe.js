@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v8.0.0
+ * Combined Notifications Panel v8.2.0
  * Vanilla JS — iframe REST API approach
- * pja 8.0.0
+ * pja 8.2.0
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.0.0";
+const VERSION = "8.2.0";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -41,7 +41,8 @@ const DOMAIN_GROUPS = {
   "Presence": ["person", "device_tracker"],
   "Media":    ["media_player"],
   "Cameras":  ["camera"],
-  "Other":    ["automation", "script", "scene", "button", "event", "update", "number", "select", "text"]
+  "Alarms":   ["alarm_control_panel"],
+  "Other":    ["automation", "script", "scene", "button", "update", "number", "select", "text", "fan", "vacuum", "water_heater", "humidifier"]
 };
 const ICON_GROUPS = {
   "All Clear": [
@@ -451,7 +452,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.0.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.2.0</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -1425,7 +1426,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.0.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.2.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
