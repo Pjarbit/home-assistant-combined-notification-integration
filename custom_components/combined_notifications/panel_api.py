@@ -18,6 +18,7 @@ RELEVANT_DOMAINS = {
     "camera", "automation", "script", "scene", "button", "update",
     "number", "select", "input_number", "input_select", "input_text",
     "counter", "timer", "input_datetime", "valve",
+    "alarm_control_panel", "fan", "vacuum", "water_heater", "humidifier",
 }
 
 
