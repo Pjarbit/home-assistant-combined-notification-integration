@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 8.0.0
+# Integration version: 8.2.0
 import logging
 import os
 import time
@@ -194,6 +194,7 @@ async def websocket_get_states(hass, connection, msg):
         "camera", "automation", "script", "scene", "button", "update",
         "number", "select", "input_number", "input_select", "input_text",
         "counter", "timer", "input_datetime", "valve",
+        "alarm_control_panel", "fan", "vacuum", "water_heater", "humidifier",
     }
 
     states = {
