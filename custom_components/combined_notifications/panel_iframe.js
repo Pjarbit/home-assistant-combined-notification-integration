@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v8.2.0
+ * Combined Notifications Panel v8.4.0
  * Vanilla JS — iframe REST API approach
- * pja 8.2.0
+ * pja 8.4.0
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.2.0";
+const VERSION = "8.4.0";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -452,7 +452,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.2.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.4.0</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -904,6 +904,11 @@ function buildEntityPicker(currentEntityId, pickerId) {
   const searchVal = _entitySearch[pickerId] ?? null;
   const isSearching = searchVal !== null;
 
+  // Manual entry fallback: allow an exactly-shaped entity_id that isn't in the
+  // states list (custom domains e.g. plant.*, or entities not currently loaded).
+  const typedId = (searchVal || "").trim().toLowerCase();
+  const isValidEntityShape = /^[a-z0-9_]+\.[a-z0-9_]+$/.test(typedId);
+
   let displayName = "";
   if (currentEntityId) {
     const found = _allEntityList.find(([id]) => id === currentEntityId);
@@ -926,7 +931,13 @@ function buildEntityPicker(currentEntityId, pickerId) {
       </div>
       ${isSearching && searchVal.length > 0 ? `
         <div style="position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0f1219;border:1px solid rgba(99,179,237,0.2);border-radius:8px;max-height:240px;overflow-y:auto;z-index:100;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-          ${filtered.length === 0 ? `<div style="padding:12px;color:#64748b;font-size:0.85rem;text-align:center;">No entities found</div>` :
+          ${filtered.length === 0 ? (isValidEntityShape ? `<div class="entity-picker-item" data-picker-id="${pickerId}" data-entity-id="${esc(typedId)}" style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;">
+                <span style="font-size:0.65rem;font-family:monospace;color:#080a0f;background:#FFCA28;padding:1px 6px;border-radius:4px;flex-shrink:0;font-weight:700;">${esc(typedId.split(".")[0])}</span>
+                <div style="min-width:0;flex:1;">
+                  <div style="font-size:0.85rem;color:#e2e8f0;font-weight:500;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(typedId)}</div>
+                  <div style="font-size:0.7rem;color:#FFCA28;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Can't verify — may alert continuously</div>
+                </div>
+              </div>` : `<div style="padding:12px;color:#64748b;font-size:0.85rem;text-align:center;">No entities found</div>`) :
             filtered.map(([id, s]) => {
               const fn = s.friendly_name || id;
               const domain = id.split(".")[0];
@@ -1426,7 +1437,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.2.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.4.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
