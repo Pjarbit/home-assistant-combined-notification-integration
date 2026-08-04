@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v8.4.0
+ * Combined Notifications Panel v8.6.0
  * Style injection + force visibility fix for card-mod compatibility
  */
 
@@ -42,15 +42,15 @@ if (typeof css  !== "function") css  = (strings, ...values) => {
 };
 
 try {
-  console.log('%cCombined Notifications v8.4.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v8.6.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v8.4.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v8.6.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 8.4.0</p>
+      <p style="margin:8px 0">Version 8.6.0</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -964,8 +964,15 @@ const DOMAIN_GROUPS = {
   "Media":      ["media_player"],
   "Cameras":    ["camera"],
   "Alarms":     ["alarm_control_panel"],
-  "Other":      ["automation", "script", "scene", "button", "update", "number", "select", "text", "fan", "vacuum", "water_heater", "humidifier"]
+  "Other":      ["automation", "script", "scene", "button", "update", "number", "select", "fan", "vacuum", "water_heater", "humidifier"]
 };
+
+// Domains that have an explicit named group (everything NOT in this set is treated as "Other").
+const NAMED_GROUP_DOMAINS = new Set(
+  Object.entries(DOMAIN_GROUPS)
+    .filter(([name]) => name !== "Other")
+    .flatMap(([, domains]) => domains)
+);
 
 // ---------------------------------------------------------------------------
 // Main panel element
@@ -1194,6 +1201,9 @@ class CombinedNotificationsPanel extends LitElement {
     const isNew = cond.entity_filter_initialized === false ||
       (cond.entity_filter_initialized === undefined && (cond.entity_filter_exclude || []).length === 0);
     if (key === "entity_filter" && isNew) {
+      // Start every matched entity OFF (excluded). The user turns ON only what
+      // they want monitored. This guarantees nothing can alert from a newly
+      // created group until the user opts it in — no surprise counts.
       const allMatched = this._matchedEntities(conditions[index]);
       conditions[index].entity_filter_exclude = allMatched.map(([id]) => id);
       conditions[index].entity_filter_initialized = true;
@@ -1429,33 +1439,51 @@ class CombinedNotificationsPanel extends LitElement {
     `;
   }
 
+  // Return true if a matched domain belongs to the given group.
+  // "Other" is a dynamic catch-all: any domain NOT in a named group.
+  _domainInGroup(domain, groupName) {
+    if (groupName === "Other") return !NAMED_GROUP_DOMAINS.has(domain);
+    return (DOMAIN_GROUPS[groupName] || []).includes(domain);
+  }
+
   _getMatchedGroups(condition) {
     if (!condition?.entity_filter) return [];
     const matchedDomains = new Set(this._getMatchedDomains(condition));
     if (matchedDomains.size === 0) return [];
     return Object.keys(DOMAIN_GROUPS).filter(groupName => {
-      return DOMAIN_GROUPS[groupName].some(domain => matchedDomains.has(domain));
+      return [...matchedDomains].some(domain => this._domainInGroup(domain, groupName));
     });
   }
 
-  _isGroupExcluded(condition, groupName) {
-    const excluded = new Set(condition.entity_filter_domains || []);
-    const groupDomains = DOMAIN_GROUPS[groupName] || [];
-    return groupDomains.every(d => excluded.has(d));
+  // Entity_ids of the currently-matched entities that belong to this group.
+  _groupEntityIds(condition, groupName) {
+    return this._matchedEntities(condition)
+      .filter(([id]) => this._domainInGroup(id.split(".")[0], groupName))
+      .map(([id]) => id);
   }
 
+  // A group counts as "excluded" when every one of its matched entities is in the exclude list.
+  _isGroupExcluded(condition, groupName) {
+    const excluded = new Set(condition.entity_filter_exclude || []);
+    const ids = this._groupEntityIds(condition, groupName);
+    if (ids.length === 0) return true;
+    return ids.every(id => excluded.has(id));
+  }
+
+  // Tapping a chip is a bulk shortcut: add/remove that group's entity_ids
+  // from entity_filter_exclude — the single list the backend actually reads.
   _toggleGroup(condIndex, groupName) {
     const conditions = [...this._config.conditions];
     const condition = conditions[condIndex];
-    let excluded = new Set(condition.entity_filter_domains || []);
-    const groupDomains = DOMAIN_GROUPS[groupName] || [];
+    const excluded = new Set(condition.entity_filter_exclude || []);
+    const ids = this._groupEntityIds(condition, groupName);
     const isCurrentlyExcluded = this._isGroupExcluded(condition, groupName);
     if (isCurrentlyExcluded) {
-      groupDomains.forEach(d => excluded.delete(d));
+      ids.forEach(id => excluded.delete(id));
     } else {
-      groupDomains.forEach(d => excluded.add(d));
+      ids.forEach(id => excluded.add(id));
     }
-    conditions[condIndex] = { ...condition, entity_filter_domains: [...excluded] };
+    conditions[condIndex] = { ...condition, entity_filter_exclude: [...excluded] };
     this._config = { ...this._config, conditions };
     this.requestUpdate();
   }
@@ -1761,7 +1789,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v8.4.0</span>
+            <span class="version-stamp">pja v8.6.0</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -2168,7 +2196,6 @@ class CombinedNotificationsPanel extends LitElement {
     const isOpen = this._expandedConditions.has(index);
     const isPaused = condition.paused || false;
     const allMatched = this._matchedEntities(condition);
-    const visible = this._visibleEntities(condition);
     const excluded = new Set(condition.entity_filter_exclude || []);
     const activeCount = allMatched.filter(([id]) => !excluded.has(id)).length;
     const sub = condition.entity_filter
@@ -2263,11 +2290,11 @@ class CombinedNotificationsPanel extends LitElement {
                   <span class="entity-list-title">Matching entities in your system</span>
                   <div style="display:flex;align-items:center;gap:8px">
                     <span class="match-count">${activeCount} / ${allMatched.length} included</span>
-                    <button class="list-action-btn include-all-btn" @click="${() => this._includeFromList(index, visible)}">Include All</button>
-                    <button class="list-action-btn exclude-all-btn" @click="${() => this._excludeFromList(index, visible)}">Exclude All</button>
+                    <button class="list-action-btn include-all-btn" @click="${() => this._includeFromList(index, allMatched)}">Include All</button>
+                    <button class="list-action-btn exclude-all-btn" @click="${() => this._excludeFromList(index, allMatched)}">Exclude All</button>
                   </div>
                 </div>
-                ${visible.map(([entityId, state]) => {
+                ${allMatched.map(([entityId, state]) => {
                   const overrides = condition.entity_label_overrides || {};
                   const customLabel = overrides[entityId] || "";
                   return html`
