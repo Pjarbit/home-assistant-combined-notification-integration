@@ -8,18 +8,9 @@ from aiohttp import web
 from homeassistant.core import HomeAssistant
 from homeassistant.components.http import HomeAssistantView
 
-from .const import DOMAIN
+from .const import DOMAIN, RELEVANT_DOMAINS
 
 _LOGGER = logging.getLogger(__name__)
-
-RELEVANT_DOMAINS = {
-    "sensor", "binary_sensor", "input_boolean", "switch", "light", "lock",
-    "cover", "climate", "person", "device_tracker", "media_player",
-    "camera", "automation", "script", "scene", "button", "update",
-    "number", "select", "input_number", "input_select", "input_text",
-    "counter", "timer", "input_datetime", "valve",
-    "alarm_control_panel", "fan", "vacuum", "water_heater", "humidifier",
-}
 
 
 class CombinedNotificationsConfigView(HomeAssistantView):
