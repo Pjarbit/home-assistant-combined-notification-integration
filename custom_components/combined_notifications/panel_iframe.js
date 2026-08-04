@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v8.4.0
+ * Combined Notifications Panel v8.6.0
  * Vanilla JS — iframe REST API approach
- * pja 8.4.0
+ * pja 8.6.0
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.4.0";
+const VERSION = "8.6.0";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -42,8 +42,36 @@ const DOMAIN_GROUPS = {
   "Media":    ["media_player"],
   "Cameras":  ["camera"],
   "Alarms":   ["alarm_control_panel"],
-  "Other":    ["automation", "script", "scene", "button", "update", "number", "select", "text", "fan", "vacuum", "water_heater", "humidifier"]
+  "Other":    ["automation", "script", "scene", "button", "update", "number", "select", "fan", "vacuum", "water_heater", "humidifier"]
 };
+
+// Domains that have an explicit named group (everything NOT in this set is treated as "Other").
+const NAMED_GROUP_DOMAINS = new Set(
+  Object.entries(DOMAIN_GROUPS)
+    .filter(([name]) => name !== "Other")
+    .flatMap(([, domains]) => domains)
+);
+
+// True if a domain belongs to the given group. "Other" is a dynamic catch-all.
+function domainInGroup(domain, groupName) {
+  if (groupName === "Other") return !NAMED_GROUP_DOMAINS.has(domain);
+  return (DOMAIN_GROUPS[groupName] || []).includes(domain);
+}
+
+// Entity_ids of the currently-matched entities that belong to this group.
+function groupEntityIds(condition, groupName) {
+  return matchedEntities(condition)
+    .filter(([id]) => domainInGroup(id.split(".")[0], groupName))
+    .map(([id]) => id);
+}
+
+// A group is "excluded" when all its matched entities are in entity_filter_exclude.
+function isGroupExcluded(condition, groupName) {
+  const excluded = new Set(condition.entity_filter_exclude || []);
+  const ids = groupEntityIds(condition, groupName);
+  if (ids.length === 0) return true;
+  return ids.every(id => excluded.has(id));
+}
 const ICON_GROUPS = {
   "All Clear": [
     "mdi:hand-okay", "mdi:check-circle", "mdi:check-all", "mdi:bell-off",
@@ -452,7 +480,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.4.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.6.0</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -760,7 +788,7 @@ function buildSmartGroupCard(condition, index) {
 
   const matchedDomains = new Set();
   allMatched.forEach(([id]) => matchedDomains.add(id.split(".")[0]));
-  const matchedGroupNames = Object.keys(DOMAIN_GROUPS).filter(g => DOMAIN_GROUPS[g].some(d => matchedDomains.has(d)));
+  const matchedGroupNames = Object.keys(DOMAIN_GROUPS).filter(g => [...matchedDomains].some(d => domainInGroup(d, g)));
 
   // Check if any entity in group is alerting
   const isGroupAlert = !isPaused && allMatched.some(([id]) => {
@@ -798,18 +826,14 @@ function buildSmartGroupCard(condition, index) {
               <div style="font-size:0.82rem;color:#94a3b8;">Include entity types:</div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${matchedGroupNames.map(gn => {
-                  const groupDomains = DOMAIN_GROUPS[gn] || [];
-                  const isExcluded = groupDomains.every(d => (condition.entity_filter_domains || []).includes(d));
+                  const isExcluded = isGroupExcluded(condition, gn);
                   return `<div class="domain-chip" data-index="${index}" data-group="${gn}" style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-family:monospace;cursor:pointer;border:1px solid ${isExcluded ? "rgba(246,173,85,0.2)" : "rgba(47,207,118,0.3)"};background:${isExcluded ? "rgba(246,173,85,0.08)" : "rgba(47,207,118,0.1)"};color:${isExcluded ? "#f6ad55" : "rgb(47,207,118)"};">${gn}</div>`;
                 }).join("")}
               </div>
             </div>
           ` : ""}
           ${condition.entity_filter ? `<div style="font-size:0.82rem;color:rgba(255,215,1,0.6);font-style:italic;padding:8px 12px;border:1px solid rgba(255,215,0,0.2);border-radius:8px;">⚠ All entities in this group must share the same alert value.</div>` : ""}
-          ${condition.entity_filter ? buildEntityList(condition, index, allMatched.filter(([id]) => {
-            const excludedDomains = new Set(condition.entity_filter_domains || []);
-            return excludedDomains.size === 0 || !excludedDomains.has(id.split(".")[0]);
-          }), excl) : ""}
+          ${condition.entity_filter ? buildEntityList(condition, index, allMatched, excl) : ""}
           ${buildField("Attribute <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>(optional)</span>", `<input class="sg-attr" data-index="${index}" type="text" value="${esc(condition.attribute || "")}" placeholder="Leave empty to use main state" style="${inputStyle()}">`)}
           <div style="display:flex;gap:8px;align-items:flex-end;">
             <div style="display:flex;flex-direction:column;gap:5px;">
@@ -1137,12 +1161,12 @@ function attachEvents() {
       const groupName = chip.dataset.group;
       const conditions = [..._config.conditions];
       const condition = conditions[condIndex];
-      let excl = new Set(condition.entity_filter_domains || []);
-      const groupDomains = DOMAIN_GROUPS[groupName] || [];
-      const isExcluded = groupDomains.every(d => excl.has(d));
-      if (isExcluded) groupDomains.forEach(d => excl.delete(d));
-      else groupDomains.forEach(d => excl.add(d));
-      conditions[condIndex] = { ...condition, entity_filter_domains: [...excl] };
+      const excl = new Set(condition.entity_filter_exclude || []);
+      const ids = groupEntityIds(condition, groupName);
+      const isExcluded = isGroupExcluded(condition, groupName);
+      if (isExcluded) ids.forEach(id => excl.delete(id));
+      else ids.forEach(id => excl.add(id));
+      conditions[condIndex] = { ...condition, entity_filter_exclude: [...excl] };
       _config = { ..._config, conditions };
       render();
     });
@@ -1194,6 +1218,16 @@ function attachEvents() {
       const conditions = [..._config.conditions];
       if (conditions[index]) {
         conditions[index] = { ...conditions[index], entity_filter: val };
+        // Start every matched entity OFF (excluded) on first keyword match, so a
+        // new group can't alert until the user opts entities in. Mirrors panel_lit.js.
+        const cond = conditions[index];
+        const isNew = cond.entity_filter_initialized === false ||
+          (cond.entity_filter_initialized === undefined && (cond.entity_filter_exclude || []).length === 0);
+        if (isNew) {
+          const allMatched = matchedEntities(conditions[index]);
+          conditions[index].entity_filter_exclude = allMatched.map(([id]) => id);
+          conditions[index].entity_filter_initialized = true;
+        }
         _config = { ..._config, conditions };
         if (_debounceTimer) clearTimeout(_debounceTimer);
         _debounceTimer = setTimeout(() => {
@@ -1437,7 +1471,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.4.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.6.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
