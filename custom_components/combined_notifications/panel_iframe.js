@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v8.6.0
+ * Combined Notifications Panel v8.7.0
  * Vanilla JS — iframe REST API approach
- * pja 8.6.0
+ * pja 8.7.0
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.6.0";
+const VERSION = "8.7.0";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -65,12 +65,11 @@ function groupEntityIds(condition, groupName) {
     .map(([id]) => id);
 }
 
-// A group is "excluded" when all its matched entities are in entity_filter_exclude.
-function isGroupExcluded(condition, groupName) {
-  const excluded = new Set(condition.entity_filter_exclude || []);
-  const ids = groupEntityIds(condition, groupName);
-  if (ids.length === 0) return true;
-  return ids.every(id => excluded.has(id));
+// Filter a matched-entity list to the active view-filter group (if any).
+function applyGroupViewFilter(index, matched) {
+  const groupName = _groupViewFilter[index];
+  if (!groupName) return matched;
+  return matched.filter(([id]) => domainInGroup(id.split(".")[0], groupName));
 }
 const ICON_GROUPS = {
   "All Clear": [
@@ -165,6 +164,7 @@ let _allEntityList = [];
 let _activeTab = "general";
 let _expandedConditions = new Set();
 let _entitySearch = {};
+let _groupViewFilter = {};
 let _backupMsg = "";
 let _saving = false;
 let _saved = false;
@@ -480,7 +480,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.6.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.7.0</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -823,17 +823,17 @@ function buildSmartGroupCard(condition, index) {
           ${buildField("Custom Group Name <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>(optional)</span>", `<input class="sg-name" data-index="${index}" type="text" value="${esc(condition.entity_filter_name || "")}" placeholder="e.g. Doors Open" style="${inputStyle()}">`)}
           ${condition.entity_filter && matchedGroupNames.length > 0 ? `
             <div style="display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:0.82rem;color:#94a3b8;">Include entity types:</div>
+              <div style="font-size:0.82rem;color:#94a3b8;">Show only:</div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${matchedGroupNames.map(gn => {
-                  const isExcluded = isGroupExcluded(condition, gn);
-                  return `<div class="domain-chip" data-index="${index}" data-group="${gn}" style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-family:monospace;cursor:pointer;border:1px solid ${isExcluded ? "rgba(246,173,85,0.2)" : "rgba(47,207,118,0.3)"};background:${isExcluded ? "rgba(246,173,85,0.08)" : "rgba(47,207,118,0.1)"};color:${isExcluded ? "#f6ad55" : "rgb(47,207,118)"};">${gn}</div>`;
+                  const isActive = _groupViewFilter[index] === gn;
+                  return `<div class="domain-chip" data-index="${index}" data-group="${gn}" style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-family:monospace;cursor:pointer;border:1px solid ${isActive ? "rgba(47,207,118,0.3)" : "rgba(246,173,85,0.2)"};background:${isActive ? "rgba(47,207,118,0.1)" : "rgba(246,173,85,0.08)"};color:${isActive ? "rgb(47,207,118)" : "#f6ad55"};">${gn}</div>`;
                 }).join("")}
               </div>
             </div>
           ` : ""}
           ${condition.entity_filter ? `<div style="font-size:0.82rem;color:rgba(255,215,1,0.6);font-style:italic;padding:8px 12px;border:1px solid rgba(255,215,0,0.2);border-radius:8px;">⚠ All entities in this group must share the same alert value.</div>` : ""}
-          ${condition.entity_filter ? buildEntityList(condition, index, allMatched, excl) : ""}
+          ${condition.entity_filter ? buildEntityList(condition, index, applyGroupViewFilter(index, allMatched), excl) : ""}
           ${buildField("Attribute <span style='font-size:0.78rem;font-weight:400;color:#64748b;'>(optional)</span>", `<input class="sg-attr" data-index="${index}" type="text" value="${esc(condition.attribute || "")}" placeholder="Leave empty to use main state" style="${inputStyle()}">`)}
           <div style="display:flex;gap:8px;align-items:flex-end;">
             <div style="display:flex;flex-direction:column;gap:5px;">
@@ -1077,7 +1077,7 @@ function attachEvents() {
   if (addGroup) addGroup.addEventListener("click", () => {
     const conditions = [..._config.conditions];
     const newIndex = conditions.length;
-    conditions.push({ entity_filter: "", entity_filter_name: "", operator: "equals", trigger_value: "", paused: false, and_conditions: [], entity_filter_exclude: [], entity_filter_domains: [...DOMAIN_GROUPS["Other"]], entity_label_overrides: {}, entity_filter_initialized: false });
+    conditions.push({ entity_filter: "", entity_filter_name: "", operator: "equals", trigger_value: "", paused: false, and_conditions: [], entity_filter_exclude: [], entity_label_overrides: {}, entity_filter_initialized: false });
     _config = { ..._config, conditions };
     _expandedConditions.add(newIndex);
     _activeTab = "smartgroups";
@@ -1133,7 +1133,7 @@ function attachEvents() {
     btn.addEventListener("click", () => {
       const condIndex = parseInt(btn.dataset.index);
       const conditions = [..._config.conditions];
-      const matched = matchedEntities(conditions[condIndex]);
+      const matched = applyGroupViewFilter(condIndex, matchedEntities(conditions[condIndex]));
       const excl = new Set(conditions[condIndex].entity_filter_exclude || []);
       matched.forEach(([id]) => excl.delete(id));
       conditions[condIndex] = { ...conditions[condIndex], entity_filter_exclude: [...excl] };
@@ -1146,7 +1146,7 @@ function attachEvents() {
     btn.addEventListener("click", () => {
       const condIndex = parseInt(btn.dataset.index);
       const conditions = [..._config.conditions];
-      const matched = matchedEntities(conditions[condIndex]);
+      const matched = applyGroupViewFilter(condIndex, matchedEntities(conditions[condIndex]));
       const excl = new Set(conditions[condIndex].entity_filter_exclude || []);
       matched.forEach(([id]) => excl.add(id));
       conditions[condIndex] = { ...conditions[condIndex], entity_filter_exclude: [...excl] };
@@ -1159,15 +1159,8 @@ function attachEvents() {
     chip.addEventListener("click", () => {
       const condIndex = parseInt(chip.dataset.index);
       const groupName = chip.dataset.group;
-      const conditions = [..._config.conditions];
-      const condition = conditions[condIndex];
-      const excl = new Set(condition.entity_filter_exclude || []);
-      const ids = groupEntityIds(condition, groupName);
-      const isExcluded = isGroupExcluded(condition, groupName);
-      if (isExcluded) ids.forEach(id => excl.delete(id));
-      else ids.forEach(id => excl.add(id));
-      conditions[condIndex] = { ...condition, entity_filter_exclude: [...excl] };
-      _config = { ..._config, conditions };
+      // View filter: show only this group, or clear if tapping the active one.
+      _groupViewFilter[condIndex] = _groupViewFilter[condIndex] === groupName ? undefined : groupName;
       render();
     });
   });
@@ -1471,7 +1464,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.6.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.7.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
