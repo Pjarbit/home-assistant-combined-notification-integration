@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v8.6.0
+ * Combined Notifications Panel v8.7.0
  * Style injection + force visibility fix for card-mod compatibility
  */
 
@@ -42,15 +42,15 @@ if (typeof css  !== "function") css  = (strings, ...values) => {
 };
 
 try {
-  console.log('%cCombined Notifications v8.6.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v8.7.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v8.6.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v8.7.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 8.6.0</p>
+      <p style="margin:8px 0">Version 8.7.0</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -1011,6 +1011,7 @@ class CombinedNotificationsPanel extends LitElement {
     this._loading = false;
     this._expandedConditions = new Set();
     this._entitySearch = {};
+    this._groupViewFilter = {};
     this._backupMsg = "";
     this._showRenameWarning = false;
     this._renaming = false;
@@ -1234,7 +1235,6 @@ class CombinedNotificationsPanel extends LitElement {
         paused: false,
         and_conditions: [],
         entity_filter_exclude: [],
-        entity_filter_domains: [...DOMAIN_GROUPS["Other"]],
         entity_label_overrides: {},
         entity_filter_initialized: false,
       });
@@ -1462,30 +1462,21 @@ class CombinedNotificationsPanel extends LitElement {
       .map(([id]) => id);
   }
 
-  // A group counts as "excluded" when every one of its matched entities is in the exclude list.
-  _isGroupExcluded(condition, groupName) {
-    const excluded = new Set(condition.entity_filter_exclude || []);
-    const ids = this._groupEntityIds(condition, groupName);
-    if (ids.length === 0) return true;
-    return ids.every(id => excluded.has(id));
+  // Tapping a chip filters the VISIBLE list to that group only (view filter).
+  // Tapping the active chip again clears the filter (show all). This does NOT
+  // change what is counted or excluded — it only narrows what rows are shown.
+  _setGroupViewFilter(condIndex, groupName) {
+    const current = this._groupViewFilter[condIndex];
+    const next = current === groupName ? null : groupName;
+    this._groupViewFilter = { ...this._groupViewFilter, [condIndex]: next };
+    this.requestUpdate();
   }
 
-  // Tapping a chip is a bulk shortcut: add/remove that group's entity_ids
-  // from entity_filter_exclude — the single list the backend actually reads.
-  _toggleGroup(condIndex, groupName) {
-    const conditions = [...this._config.conditions];
-    const condition = conditions[condIndex];
-    const excluded = new Set(condition.entity_filter_exclude || []);
-    const ids = this._groupEntityIds(condition, groupName);
-    const isCurrentlyExcluded = this._isGroupExcluded(condition, groupName);
-    if (isCurrentlyExcluded) {
-      ids.forEach(id => excluded.delete(id));
-    } else {
-      ids.forEach(id => excluded.add(id));
-    }
-    conditions[condIndex] = { ...condition, entity_filter_exclude: [...excluded] };
-    this._config = { ...this._config, conditions };
-    this.requestUpdate();
+  // Filter a matched-entity list down to the currently-selected group view (if any).
+  _applyGroupViewFilter(condIndex, matched) {
+    const groupName = this._groupViewFilter[condIndex];
+    if (!groupName) return matched;
+    return matched.filter(([id]) => this._domainInGroup(id.split(".")[0], groupName));
   }
 
   _setEntityLabel(condIndex, entityId, label) {
@@ -1789,7 +1780,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v8.6.0</span>
+            <span class="version-stamp">pja v8.7.0</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -2196,6 +2187,7 @@ class CombinedNotificationsPanel extends LitElement {
     const isOpen = this._expandedConditions.has(index);
     const isPaused = condition.paused || false;
     const allMatched = this._matchedEntities(condition);
+    const visibleList = this._applyGroupViewFilter(index, allMatched);
     const excluded = new Set(condition.entity_filter_exclude || []);
     const activeCount = allMatched.filter(([id]) => !excluded.has(id)).length;
     const sub = condition.entity_filter
@@ -2247,24 +2239,14 @@ class CombinedNotificationsPanel extends LitElement {
 
             ${condition.entity_filter ? html`
               <div class="domain-filter">
-                <div class="domain-filter-label">Include entity types:</div>
+                <div class="domain-filter-label">Show only:</div>
                 <div class="domain-chips">
                   ${this._getMatchedGroups(condition).map(groupName => {
-                    const isExcluded = this._isGroupExcluded(condition, groupName);
-                    const groupDomains = DOMAIN_GROUPS[groupName] || [];
-                    const excludeList = new Set(condition.entity_filter_exclude || []);
-                    const keyword = (condition.entity_filter || "").toLowerCase();
-                    const hasIncluded = isExcluded && this._allEntityList
-                      .filter(([id, s]) => {
-                        const fn = (s.friendly_name || "").toLowerCase();
-                        return id.toLowerCase().includes(keyword) || fn.includes(keyword);
-                      })
-                      .some(([id]) => groupDomains.includes(id.split(".")[0]) && !excludeList.has(id));
-                    const chipClass = !isExcluded ? "included" : "excluded";
-                    const chipStyle = (!isExcluded) ? "" : hasIncluded ? "animation: chip-pulse 2s ease-in-out infinite;" : "";
+                    const isActive = this._groupViewFilter[index] === groupName;
+                    const chipClass = isActive ? "included" : "excluded";
                     return html`
-                      <div class="domain-chip ${chipClass}" style="${chipStyle}"
-                        @click="${() => this._toggleGroup(index, groupName)}">
+                      <div class="domain-chip ${chipClass}"
+                        @click="${() => this._setGroupViewFilter(index, groupName)}">
                         ${groupName}
                       </div>
                     `;
@@ -2290,11 +2272,11 @@ class CombinedNotificationsPanel extends LitElement {
                   <span class="entity-list-title">Matching entities in your system</span>
                   <div style="display:flex;align-items:center;gap:8px">
                     <span class="match-count">${activeCount} / ${allMatched.length} included</span>
-                    <button class="list-action-btn include-all-btn" @click="${() => this._includeFromList(index, allMatched)}">Include All</button>
-                    <button class="list-action-btn exclude-all-btn" @click="${() => this._excludeFromList(index, allMatched)}">Exclude All</button>
+                    <button class="list-action-btn include-all-btn" @click="${() => this._includeFromList(index, visibleList)}">Include All</button>
+                    <button class="list-action-btn exclude-all-btn" @click="${() => this._excludeFromList(index, visibleList)}">Exclude All</button>
                   </div>
                 </div>
-                ${allMatched.map(([entityId, state]) => {
+                ${visibleList.map(([entityId, state]) => {
                   const overrides = condition.entity_label_overrides || {};
                   const customLabel = overrides[entityId] || "";
                   return html`
