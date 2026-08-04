@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 8.4.0
+# Integration version: 8.6.0
 import logging
 import os
 import time
@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components import frontend, websocket_api
 from homeassistant.components.http import StaticPathConfig
 import voluptuous as vol
-from .const import DOMAIN, COLOR_MAP
+from .const import DOMAIN, COLOR_MAP, RELEVANT_DOMAINS
 from .panel_api import async_register_views
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,15 +187,6 @@ async def websocket_get_states(hass, connection, msg):
     if not entry:
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
-
-    RELEVANT_DOMAINS = {
-        "sensor", "binary_sensor", "input_boolean", "switch", "light", "lock",
-        "cover", "climate", "person", "device_tracker", "media_player",
-        "camera", "automation", "script", "scene", "button", "update",
-        "number", "select", "input_number", "input_select", "input_text",
-        "counter", "timer", "input_datetime", "valve",
-        "alarm_control_panel", "fan", "vacuum", "water_heater", "humidifier",
-    }
 
     states = {
         state.entity_id: {
