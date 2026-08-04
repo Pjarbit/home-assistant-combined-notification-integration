@@ -10,7 +10,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import logging
-from .const import COLOR_MAP, DOMAIN
+from .const import COLOR_MAP, DOMAIN, RELEVANT_DOMAINS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -141,6 +141,11 @@ class CombinedNotificationSensor(Entity):
 
             for state_obj in self._hass.states.async_all():
                 entity_id = state_obj.entity_id
+                # Only count domains the panel can also display. This keeps the
+                # invariant that anything the sensor counts is visible/toggleable
+                # in the panel — no counted-but-hidden entities.
+                if entity_id.split(".")[0] not in RELEVANT_DOMAINS:
+                    continue
                 if entity_id in excluded:
                     continue
                 friendly_name = state_obj.attributes.get("friendly_name", entity_id)
@@ -191,6 +196,9 @@ class CombinedNotificationSensor(Entity):
             excluded = set(c.get("entity_filter_exclude", []))
             for state_obj in self._hass.states.async_all():
                 eid = state_obj.entity_id
+                # Match _expand_conditions: only monitor panel-visible domains.
+                if eid.split(".")[0] not in RELEVANT_DOMAINS:
+                    continue
                 if eid in excluded:
                     continue
                 friendly_name = state_obj.attributes.get("friendly_name", eid)
