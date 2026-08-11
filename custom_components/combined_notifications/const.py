@@ -1,5 +1,5 @@
 """Constants for the Combined Notifications integration."""
-# Integration version: 8.7.0
+# Integration version: 8.8.0
 
 DOMAIN = "combined_notifications"
 
