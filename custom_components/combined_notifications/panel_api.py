@@ -1,5 +1,5 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.7.0
+# Integration version: 8.8.0
 from __future__ import annotations
 
 import logging
@@ -19,7 +19,6 @@ class CombinedNotificationsConfigView(HomeAssistantView):
 
     url = "/api/combined_notifications/config"
     name = "api:combined_notifications:config"
-    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         """Return config for an entry."""
