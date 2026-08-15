@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v8.8.0
+ * Combined Notifications Panel v8.10.0
  * Vanilla JS — iframe REST API approach
- * pja 8.8.0
+ * pja 8.10.0
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.8.0";
+const VERSION = "8.10.0";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -179,18 +179,6 @@ let _entryId = "";
 // Auth
 // ---------------------------------------------------------------------------
 
-function getToken() {
-  try {
-    const raw = localStorage.getItem("hassTokens");
-    if (!raw) return "";
-    const tokens = JSON.parse(raw);
-    return tokens.access_token || "";
-  } catch (e) {
-    console.warn("CN Panel: Token retrieval failed", e);
-    return "";
-  }
-}
-
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
@@ -199,7 +187,7 @@ async function loadConfig() {
   try {
     console.log('%cCN Panel: Loading config via REST', 'color:#63b3ed', _entryId);
     const resp = await fetch(`/api/combined_notifications/config?entry_id=${_entryId}`, {
-      headers: { "Authorization": `Bearer ${getToken()}` }
+      credentials: "include",
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const result = await resp.json();
@@ -232,7 +220,7 @@ async function loadStates() {
   _statesLoading = true;
   try {
     const resp = await fetch(`/api/combined_notifications/states`, {
-      headers: { "Authorization": `Bearer ${getToken()}` }
+      credentials: "include",
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const result = await resp.json();
@@ -275,7 +263,8 @@ async function saveConfig() {
     }));
     const resp = await fetch(`/api/combined_notifications/config?entry_id=${_entryId}`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${getToken()}`, "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ..._config, conditions }),
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -480,7 +469,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.8.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.10.0</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -1464,7 +1453,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.8.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.10.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
