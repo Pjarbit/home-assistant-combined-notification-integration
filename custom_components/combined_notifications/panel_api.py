@@ -1,10 +1,11 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.1
+# Integration version: 8.10.2
 from __future__ import annotations
 
 import logging
 import json
 import pathlib
+from datetime import timedelta
 from aiohttp import web
 from homeassistant.core import HomeAssistant
 from homeassistant.components.http import HomeAssistantView
@@ -19,6 +20,7 @@ class CombinedNotificationsConfigView(HomeAssistantView):
 
     url = "/api/combined_notifications/config"
     name = "api:combined_notifications:config"
+    requires_auth = True
 
     async def get(self, request: web.Request) -> web.Response:
         """Return config for an entry."""
@@ -111,26 +113,61 @@ class CombinedNotificationsStatesView(HomeAssistantView):
         return self.json({"states": states}, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 
+CN_CLIENT_ID = "https://combined-notifications.local"
+CN_CLIENT_NAME = "Combined Notifications Panel"
+TOKEN_LIFETIME = timedelta(minutes=45)
+
+
 class CombinedNotificationsPanelView(HomeAssistantView):
-    """Serve panel.html."""
+    """Serve panel.html with a short-lived access token injected."""
 
     url = "/api/combined_notifications/panel"
     name = "api:combined_notifications:panel"
-    requires_auth = False
+    requires_auth = True
 
     async def get(self, request: web.Request) -> web.Response:
-            """Serve the panel HTML page."""
-            hass: HomeAssistant = request.app["hass"]
-            try:
-                html_path = pathlib.Path(__file__).parent / "panel.html"
-                html = await hass.async_add_executor_job(html_path.read_text, "utf-8")
-            except Exception as e:
-                html = f"<h1 style='color:red;padding:40px'>panel.html failed to load:<br>{str(e)}</h1>"
-            return web.Response(
-                content_type="text/html",
-                text=html,
-                headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+        """Serve the panel HTML page with an injected access token."""
+        hass: HomeAssistant = request.app["hass"]
+        user = request["hass_user"]
+
+        # Reuse existing refresh token for this client_id if present
+        refresh_token = next(
+            (
+                rt
+                for rt in user.refresh_tokens.values()
+                if rt.client_id == CN_CLIENT_ID
+            ),
+            None,
+        )
+
+        if refresh_token is None:
+            refresh_token = await hass.auth.async_create_refresh_token(
+                user,
+                client_id=CN_CLIENT_ID,
+                client_name=CN_CLIENT_NAME,
+                access_token_expiration=TOKEN_LIFETIME,
             )
+
+        access_token = hass.auth.async_create_access_token(
+            refresh_token,
+            remote_ip=request.remote,
+        )
+
+        try:
+            html_path = pathlib.Path(__file__).parent / "panel.html"
+            html = await hass.async_add_executor_job(html_path.read_text, "utf-8")
+        except Exception as e:
+            html = f"<h1 style='color:red;padding:40px'>panel.html failed to load:<br>{str(e)}</h1>"
+
+        # Inject token just before </head>
+        inject = f'<script>window.__CN_ACCESS_TOKEN="{access_token}";</script>'
+        html = html.replace("</head>", inject + "</head>", 1)
+
+        return web.Response(
+            content_type="text/html",
+            text=html,
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+        )
 
 
 class CombinedNotificationsPanelJSView(HomeAssistantView):
