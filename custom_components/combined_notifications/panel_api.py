@@ -1,5 +1,5 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.3b
+# Integration version: 8.10.4b
 from __future__ import annotations
 
 import logging
