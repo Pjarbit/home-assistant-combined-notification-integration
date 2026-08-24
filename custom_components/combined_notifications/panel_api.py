@@ -128,7 +128,7 @@ class CombinedNotificationsPanelView(HomeAssistantView):
     async def get(self, request: web.Request) -> web.Response:
         """Serve the panel HTML page with an injected access token."""
         hass: HomeAssistant = request.app["hass"]
-        user = request["hass_user"]
+        user = request.get("hass_user")
 
         # Reuse existing refresh token for this client_id if present
         refresh_token = next(
