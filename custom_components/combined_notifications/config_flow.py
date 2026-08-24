@@ -3,6 +3,7 @@ import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -79,10 +80,15 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             compatibility_mode = user_input.get("compatibility_mode", False)
             use_attributes = user_input.get("use_attributes", False)
+            compat_mode_key = user_input.get("compat_mode_key", "").strip()
             # Save preference directly to options
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
-                options={"compatibility_mode": compatibility_mode, "use_attributes": use_attributes},
+                options={
+                    "compatibility_mode": compatibility_mode,
+                    "use_attributes": use_attributes,
+                    "compat_mode_key": compat_mode_key,
+                },
             )
             # Reload the entry so changes take effect immediately without HA restart
             self.hass.async_create_task(
@@ -94,10 +100,14 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
 
         current_mode = self.config_entry.options.get("compatibility_mode", False)
         current_use_attributes = self.config_entry.options.get("use_attributes", False)
+        current_compat_key = self.config_entry.options.get("compat_mode_key", "")
 
         schema = vol.Schema({
             vol.Required("compatibility_mode", default=current_mode): bool,
             vol.Required("use_attributes", default=current_use_attributes): bool,
+            vol.Optional("compat_mode_key", default=current_compat_key): selector.selector(
+                {"text": {"type": "password"}}
+            ),
         })
 
         return self.async_show_form(
