@@ -1,7 +1,7 @@
 /**
- * Combined Notifications Panel v8.10.2
+ * Combined Notifications Panel v8.10.6
  * Vanilla JS — iframe REST API approach
- * pja 8.10.2
+ * pja 8.10.6
  */
 
 // ---------------------------------------------------------------------------
@@ -491,7 +491,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.10.2</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.10.6</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
