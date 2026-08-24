@@ -1,7 +1,8 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.4b
+# Integration version: 8.10.5
 from __future__ import annotations
 
+import hmac
 import logging
 import json
 import pathlib
@@ -10,9 +11,18 @@ from aiohttp import web
 from homeassistant.core import HomeAssistant
 from homeassistant.components.http import HomeAssistantView
 
-from .const import DOMAIN, RELEVANT_DOMAINS
+from .const import DOMAIN, RELEVANT_DOMAINS, CONF_COMPAT_MODE_KEY
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _check_compat_key(request: web.Request, entry) -> bool:
+    """Return True if the compat-mode key check passes (or no key is set)."""
+    expected = entry.options.get(CONF_COMPAT_MODE_KEY, "") or ""
+    if not expected:
+        return True  # no key set = open, non-breaking for existing users
+    provided = request.rel_url.query.get("key", "") or ""
+    return hmac.compare_digest(provided, expected)
 
 
 class CombinedNotificationsConfigView(HomeAssistantView):
@@ -20,7 +30,7 @@ class CombinedNotificationsConfigView(HomeAssistantView):
 
     url = "/api/combined_notifications/config"
     name = "api:combined_notifications:config"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         """Return config for an entry."""
@@ -33,7 +43,13 @@ class CombinedNotificationsConfigView(HomeAssistantView):
         if not entry:
             return self.json_message("Entry not found", 404)
 
-        return self.json({"config": dict(entry.data)}, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+        if not _check_compat_key(request, entry):
+            return self.json_message("Forbidden", 403)
+
+        return self.json(
+            {"config": dict(entry.data), "options": dict(entry.options)},
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+        )
 
     async def post(self, request: web.Request) -> web.Response:
         """Save config for an entry."""
@@ -45,6 +61,9 @@ class CombinedNotificationsConfigView(HomeAssistantView):
         entry = hass.config_entries.async_get_entry(entry_id)
         if not entry:
             return self.json_message("Entry not found", 404)
+
+        if not _check_compat_key(request, entry):
+            return self.json_message("Forbidden", 403)
 
         try:
             body = await request.json()
@@ -94,11 +113,21 @@ class CombinedNotificationsStatesView(HomeAssistantView):
 
     url = "/api/combined_notifications/states"
     name = "api:combined_notifications:states"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         """Return filtered entity states."""
         hass: HomeAssistant = request.app["hass"]
+        entry_id = request.rel_url.query.get("entry_id")
+        if not entry_id:
+            return self.json_message("entry_id required", 400)
+
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if not entry:
+            return self.json_message("Entry not found", 404)
+
+        if not _check_compat_key(request, entry):
+            return self.json_message("Forbidden", 403)
 
         states = {
             state.entity_id: {
@@ -119,39 +148,40 @@ TOKEN_LIFETIME = timedelta(minutes=45)
 
 
 class CombinedNotificationsPanelView(HomeAssistantView):
-    """Serve panel.html with a short-lived access token injected."""
+    """Serve panel.html with a short-lived access token injected, when available."""
 
     url = "/api/combined_notifications/panel"
     name = "api:combined_notifications:panel"
     requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
-        """Serve the panel HTML page with an injected access token."""
+        """Serve the panel HTML page with an injected access token and compat key."""
         hass: HomeAssistant = request.app["hass"]
         user = request.get("hass_user")
+        access_token = None
 
-        # Reuse existing refresh token for this client_id if present
-        refresh_token = next(
-            (
-                rt
-                for rt in user.refresh_tokens.values()
-                if rt.client_id == CN_CLIENT_ID
-            ),
-            None,
-        )
-
-        if refresh_token is None:
-            refresh_token = await hass.auth.async_create_refresh_token(
-                user,
-                client_id=CN_CLIENT_ID,
-                client_name=CN_CLIENT_NAME,
-                access_token_expiration=TOKEN_LIFETIME,
+        if user is not None:
+            refresh_token = next(
+                (
+                    rt
+                    for rt in user.refresh_tokens.values()
+                    if rt.client_id == CN_CLIENT_ID
+                ),
+                None,
             )
 
-        access_token = hass.auth.async_create_access_token(
-            refresh_token,
-            remote_ip=request.remote,
-        )
+            if refresh_token is None:
+                refresh_token = await hass.auth.async_create_refresh_token(
+                    user,
+                    client_id=CN_CLIENT_ID,
+                    client_name=CN_CLIENT_NAME,
+                    access_token_expiration=TOKEN_LIFETIME,
+                )
+
+            access_token = hass.auth.async_create_access_token(
+                refresh_token,
+                remote_ip=request.remote,
+            )
 
         try:
             html_path = pathlib.Path(__file__).parent / "panel.html"
@@ -159,9 +189,22 @@ class CombinedNotificationsPanelView(HomeAssistantView):
         except Exception as e:
             html = f"<h1 style='color:red;padding:40px'>panel.html failed to load:<br>{str(e)}</h1>"
 
-        # Inject token just before </head>
-        inject = f'<script>window.__CN_ACCESS_TOKEN="{access_token}";</script>'
-        html = html.replace("</head>", inject + "</head>", 1)
+        entry_id = request.rel_url.query.get("entry_id")
+        compat_key = None
+        if entry_id:
+            entry = hass.config_entries.async_get_entry(entry_id)
+            if entry:
+                compat_key = entry.options.get(CONF_COMPAT_MODE_KEY, "") or None
+
+        inject_parts = []
+        if access_token:
+            inject_parts.append(f'window.__CN_ACCESS_TOKEN="{access_token}";')
+        if compat_key:
+            inject_parts.append(f'window.__CN_COMPAT_KEY="{compat_key}";')
+
+        if inject_parts:
+            inject = "<script>" + " ".join(inject_parts) + "</script>"
+            html = html.replace("</head>", inject + "</head>", 1)
 
         return web.Response(
             content_type="text/html",
