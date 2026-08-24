@@ -1,5 +1,5 @@
 """Constants for the Combined Notifications integration."""
-# Integration version: 8.10.2
+# Integration version: 8.10.5
 
 DOMAIN = "combined_notifications"
 
@@ -57,3 +57,6 @@ COLOR_MAP = {
     "Transparent Background":       "transparent",
     "Use YOUR Current Theme Color": "var(--primary-background-color)",
 }
+
+# Compatibility-mode shared-secret key (options flow). Empty/unset = open access.
+CONF_COMPAT_MODE_KEY = "compat_mode_key"
