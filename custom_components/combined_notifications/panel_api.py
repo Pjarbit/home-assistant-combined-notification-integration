@@ -1,5 +1,5 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.2
+# Integration version: 8.10.3b
 from __future__ import annotations
 
 import logging
@@ -123,7 +123,7 @@ class CombinedNotificationsPanelView(HomeAssistantView):
 
     url = "/api/combined_notifications/panel"
     name = "api:combined_notifications:panel"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         """Serve the panel HTML page with an injected access token."""
