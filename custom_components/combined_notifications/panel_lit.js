@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v8.10.5
+ * Combined Notifications Panel v8.10.6
  * Style injection + force visibility fix for card-mod compatibility
  */
 
