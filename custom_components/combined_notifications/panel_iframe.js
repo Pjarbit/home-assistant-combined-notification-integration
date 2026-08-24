@@ -183,6 +183,26 @@ function getAccessToken() {
   return window.__CN_ACCESS_TOKEN || null;
 }
 
+function getCompatKey() {
+  return window.__CN_COMPAT_KEY || null;
+}
+
+// Builds fetch options + a query-string suffix for the compat key.
+// Prefers a real HA Bearer token when available; falls back to the
+// compat-mode key as a query param when there is no authenticated user.
+function buildAuthFetch(url) {
+  const token = getAccessToken();
+  const key = getCompatKey();
+  const sep = url.includes("?") ? "&" : "?";
+  if (token) {
+    return { url, headers: { Authorization: `Bearer ${token}` } };
+  }
+  if (key) {
+    return { url: `${url}${sep}key=${encodeURIComponent(key)}`, headers: {} };
+  }
+  return { url, headers: {} };
+}
+
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
@@ -190,11 +210,8 @@ function getAccessToken() {
 async function loadConfig() {
   try {
     console.log('%cCN Panel: Loading config via REST', 'color:#63b3ed', _entryId);
-    const token = getAccessToken();
-    if (!token) throw new Error("No access token available — reopen the panel");
-    const resp = await fetch(`/api/combined_notifications/config?entry_id=${_entryId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { url, headers } = buildAuthFetch(`/api/combined_notifications/config?entry_id=${_entryId}`);
+    const resp = await fetch(url, { headers });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const result = await resp.json();
     console.log('%cCN Panel: Config loaded successfully', 'color:#39FF14');
@@ -225,11 +242,8 @@ async function loadStates() {
   if (_statesLoading) return;
   _statesLoading = true;
   try {
-    const token = getAccessToken();
-    if (!token) throw new Error("No access token available — reopen the panel");
-    const resp = await fetch(`/api/combined_notifications/states`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { url, headers } = buildAuthFetch(`/api/combined_notifications/states?entry_id=${_entryId}`);
+    const resp = await fetch(url, { headers });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const result = await resp.json();
 
@@ -269,14 +283,10 @@ async function saveConfig() {
         operator: OPERATOR_LABEL_TO_SYMBOL[ac.operator] || ac.operator,
       })),
     }));
-    const token = getAccessToken();
-    if (!token) throw new Error("No access token available — reopen the panel");
-    const resp = await fetch(`/api/combined_notifications/config?entry_id=${_entryId}`, {
+    const { url, headers } = buildAuthFetch(`/api/combined_notifications/config?entry_id=${_entryId}`);
+    const resp = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ ..._config, conditions }),
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
