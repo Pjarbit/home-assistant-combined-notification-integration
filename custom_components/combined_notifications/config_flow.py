@@ -90,10 +90,21 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
                     "compat_mode_key": compat_mode_key,
                 },
             )
-            # Reload the entry so changes take effect immediately without HA restart
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.config_entry.entry_id)
-            )
+            # Update the sensor's use_attributes flag synchronously
+            sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+            if sensor and hasattr(sensor, "async_update_use_attributes"):
+                await sensor.async_update_use_attributes(use_attributes)
+
+            # Register the panel synchronously BEFORE navigating, so the
+            # external step never lands on an unregistered panel path.
+            # (Previously this only happened via a background reload task,
+            # which raced with navigation — the panel wasn't always ready
+            # in time, producing a blank panel on some systems.)
+            from . import async_register_cn_panel
+            await async_register_cn_panel(self.hass, self.config_entry)
+
+            # No background reload needed — sensor and panel are both
+            # already updated synchronously above.
             # Open the correct panel
             panel_url = f"/combined-notifications-{self.config_entry.entry_id}"
             return self.async_external_step(url=panel_url)
