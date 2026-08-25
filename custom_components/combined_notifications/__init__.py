@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 8.10.6
+# Integration version: 8.10.7
 import logging
 import os
 import time
@@ -69,32 +69,14 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Combined Notifications from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+async def async_register_cn_panel(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Register (or re-register) the CN panel for a given entry.
 
+    Callable directly and awaited from config_flow.py so the panel is
+    guaranteed to exist before the frontend navigates to it, instead of
+    relying on a background reload finishing first.
+    """
     compatibility_mode = entry.options.get("compatibility_mode", False)
-    use_attributes = entry.options.get("use_attributes", False)
-
-    # If sensor already loaded, update use_attributes flag live
-    sensor = hass.data[DOMAIN].get(entry.entry_id)
-    if sensor and hasattr(sensor, "async_update_use_attributes"):
-        await sensor.async_update_use_attributes(use_attributes)
-
-    # Register REST API views (needed for HTML mode; idempotent)
-    if not hass.data[DOMAIN].get("_views_registered"):
-        async_register_views(hass)
-        hass.data[DOMAIN]["_views_registered"] = True
-
-    # Register websocket commands once only — avoids duplicate registration warnings on reload
-    if not hass.data[DOMAIN].get("_ws_registered"):
-        websocket_api.async_register_command(hass, websocket_get_config)
-        websocket_api.async_register_command(hass, websocket_get_states)
-        websocket_api.async_register_command(hass, websocket_save_config)
-        hass.data[DOMAIN]["_ws_registered"] = True
-
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
-
     panel_url = f"combined-notifications-{entry.entry_id}"
 
     # Remove stale panel before re-registering
@@ -133,6 +115,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             },
             require_admin=True,
         )
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Combined Notifications from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+
+    use_attributes = entry.options.get("use_attributes", False)
+
+    # If sensor already loaded, update use_attributes flag live
+    sensor = hass.data[DOMAIN].get(entry.entry_id)
+    if sensor and hasattr(sensor, "async_update_use_attributes"):
+        await sensor.async_update_use_attributes(use_attributes)
+
+    # Register REST API views (needed for HTML mode; idempotent)
+    if not hass.data[DOMAIN].get("_views_registered"):
+        async_register_views(hass)
+        hass.data[DOMAIN]["_views_registered"] = True
+
+    # Register websocket commands once only — avoids duplicate registration warnings on reload
+    if not hass.data[DOMAIN].get("_ws_registered"):
+        websocket_api.async_register_command(hass, websocket_get_config)
+        websocket_api.async_register_command(hass, websocket_get_states)
+        websocket_api.async_register_command(hass, websocket_save_config)
+        hass.data[DOMAIN]["_ws_registered"] = True
+
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+
+    await async_register_cn_panel(hass, entry)
 
     return True
 
