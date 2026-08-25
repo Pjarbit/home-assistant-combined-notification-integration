@@ -1,5 +1,5 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.6
+# Integration version: 8.10.7
 from __future__ import annotations
 
 import hmac
