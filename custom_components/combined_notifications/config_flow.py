@@ -73,10 +73,22 @@ class CombinedNotificationsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
-    """Options flow — show compatibility toggle, save preference, open correct panel."""
+    """Options flow — show compatibility toggle, save preference, link to panel."""
 
     async def async_step_init(self, user_input=None):
-        """Show compatibility mode checkbox pre-filled from last saved preference."""
+        """Show settings form with a link to the panel.
+
+        Previously this used async_external_step() to auto-open the panel
+        via window.open(). That stopped working reliably on HA Core 2026.8+
+        (confirmed via version bisection: works on 2026.7.4, fails on
+        2026.8.1/8.2/8.3) — the step-flow-external component renders an
+        empty pane and never navigates, with no console error. The panel
+        itself and its auth were never the problem; only the external-step
+        hand-off was. This form-based approach is the supported options-flow
+        pattern and isn't affected by that regression.
+        """
+        panel_url = f"/combined-notifications-{self.config_entry.entry_id}"
+
         if user_input is not None:
             compatibility_mode = user_input.get("compatibility_mode", False)
             use_attributes = user_input.get("use_attributes", False)
@@ -95,19 +107,12 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             if sensor and hasattr(sensor, "async_update_use_attributes"):
                 await sensor.async_update_use_attributes(use_attributes)
 
-            # Register the panel synchronously BEFORE navigating, so the
-            # external step never lands on an unregistered panel path.
-            # (Previously this only happened via a background reload task,
-            # which raced with navigation — the panel wasn't always ready
-            # in time, producing a blank panel on some systems.)
+            # Register the panel synchronously so the link in the form is
+            # always valid, whether or not this is the first save.
             from . import async_register_cn_panel
             await async_register_cn_panel(self.hass, self.config_entry)
 
-            # No background reload needed — sensor and panel are both
-            # already updated synchronously above.
-            # Open the correct panel
-            panel_url = f"/combined-notifications-{self.config_entry.entry_id}"
-            return self.async_external_step(url=panel_url)
+            return self.async_create_entry(title="", data={})
 
         current_mode = self.config_entry.options.get("compatibility_mode", False)
         current_use_attributes = self.config_entry.options.get("use_attributes", False)
@@ -124,8 +129,5 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=schema,
+            description_placeholders={"panel_url": panel_url},
         )
-
-    async def async_step_external(self, user_input=None):
-        """Handle return from external panel."""
-        return self.async_create_entry(title="", data=self.config_entry.options)
