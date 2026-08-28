@@ -1,5 +1,5 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.7
+# Integration version: 8.10.10
 from __future__ import annotations
 
 import hmac
@@ -61,6 +61,15 @@ class CombinedNotificationsConfigView(HomeAssistantView):
         entry = hass.config_entries.async_get_entry(entry_id)
         if not entry:
             return self.json_message("Entry not found", 404)
+
+        # If a logged-in HA user is present (e.g. same-session request),
+        # require admin. If there's no HA user at all (the normal
+        # compatibility-mode case, requires_auth=False), fall through to
+        # the existing compat_mode_key check below — that's the documented
+        # trust boundary for this path, unchanged in this release.
+        user = request.get("hass_user")
+        if user is not None and not user.is_admin:
+            return self.json_message("Forbidden", 403)
 
         if not _check_compat_key(request, entry):
             return self.json_message("Forbidden", 403)
