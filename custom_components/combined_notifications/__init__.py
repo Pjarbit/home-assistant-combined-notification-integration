@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 8.10.7
+# Integration version: 8.10.10
 import logging
 import os
 import time
@@ -58,7 +58,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     panel_path = os.path.join(os.path.dirname(__file__), PANEL_LIT_FILENAME)
     _LOGGER.info("Registering CN LitElement panel from: %s", panel_path)
 
-    if not os.path.exists(panel_path):
+    if not await hass.async_add_executor_job(os.path.exists, panel_path):
         _LOGGER.error("LitElement panel file not found at %s", panel_path)
         return False
 
@@ -216,6 +216,7 @@ async def websocket_get_states(hass, connection, msg):
     vol.Required("entry_id"): str,
     vol.Required("data"): dict,
 })
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_save_config(hass, connection, msg):
     """Save updated config for an entry."""
