@@ -1780,7 +1780,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v8.10.2</span>
+            <span class="version-stamp">pja v8.10.10</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
