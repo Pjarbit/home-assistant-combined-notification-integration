@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v8.10.6
+ * Combined Notifications Panel v8.10.10
  * Vanilla JS — iframe REST API approach
  * pja 8.10.10
  */
@@ -8,7 +8,7 @@
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.10.2";
+const VERSION = "8.10.10";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -1475,7 +1475,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.10.2 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.10.10 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
