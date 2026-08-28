@@ -27,7 +27,7 @@
     "step": {
       "init": {
         "title": "Combined Notifications Settings",
-        "description": "If the configuration panel appears blank, enable compatibility mode. Note: compatibility mode disables real-time entity updates and the native HA icon picker.\n\n⚠️ BREAKING CHANGE — Attribute mode: if you enable this, your existing dashboard cards and automations WILL BREAK. You must update them to reference the attribute instead of the sensor state directly. Use state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') in place of states('sensor.YOUR_SENSOR_NAME').",
+        "description": "**[Open configuration panel]({panel_url})**\n\nUse the link above to open the full configuration panel (colors, icons, conditions, etc). If it appears blank, enable compatibility mode below and re-open it. Note: compatibility mode disables real-time entity updates and the native HA icon picker.\n\n⚠️ BREAKING CHANGE — Attribute mode: if you enable this, your existing dashboard cards and automations WILL BREAK. You must update them to reference the attribute instead of the sensor state directly. Use state_attr('sensor.YOUR_SENSOR_NAME', 'alert_list') in place of states('sensor.YOUR_SENSOR_NAME').",
         "data": {
           "compatibility_mode": "Enable compatibility mode (HTML panel) — use if your config panel appears blank",
           "use_attributes": "Enable attribute mode — WARNING: breaks existing cards/automations, see below",
@@ -38,11 +38,9 @@
           "use_attributes": "When enabled: sensor state becomes on/off, full alert list moves to alert_list attribute (no 255 character limit). Default is off — existing automations and cards are unaffected.",
           "compat_mode_key": "Only necessary for compatibility mode. If you don't want to secure the configuration, leave blank."
         },
-        "submit": "Open Configuration Panel"
+        "submit": "Save"
       }
     },
-    "abort": {
-      "panel_opened": "Configuration panel opened."
-    }
+    "abort": {}
   }
 }
