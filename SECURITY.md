@@ -37,7 +37,9 @@ Combined Notifications is a Home Assistant custom integration with a REST API pa
 
 ### Known, documented tradeoff
 
-Compatibility mode (the iframe-based panel) supports an optional shared-secret key (`compat_mode_key`), set by the user in the integration's options. If left blank, the compatibility-mode panel and its data endpoints are accessible to anyone who knows the panel URL and can reach the Home Assistant instance's network — this is a deliberate, documented design tradeoff (see the field's description in the integration's config UI), not an oversight. It is not equivalent to Home Assistant's own authentication: no hashing, no rate-limiting. Users on networks exposed beyond a trusted LAN should set a key or avoid compatibility mode. The standard (Lit) panel is unaffected and always uses Home Assistant's real authentication.
+Compatibility mode (the iframe-based panel) has no authentication of its own as of v8.11.0. A shared-secret key option (`compat_mode_key`) was previously exposed in the settings UI, but it was found to be non-functional — the panel's own frontend never sent the key back to the server, so enabling it would have locked users out of their own panel rather than protecting it. The field has been hidden and the key is no longer enforced anywhere, pending a proper implementation in a future release.
+
+Until then: compatibility mode's data endpoints (configuration and entity states) are accessible to anyone who knows the panel URL and can reach the Home Assistant instance's network. This is a deliberate, documented tradeoff for this release, not an oversight — **only use compatibility mode on a trusted, secured network.** It is not equivalent to Home Assistant's own authentication. The standard (Lit) panel is unaffected and always uses Home Assistant's real authentication.
 
 Issues in Home Assistant itself, HACS, or third-party integrations are out of scope — please report those to their respective projects.
 
