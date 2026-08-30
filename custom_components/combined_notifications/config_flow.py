@@ -92,16 +92,26 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             compatibility_mode = user_input.get("compatibility_mode", False)
             use_attributes = user_input.get("use_attributes", False)
-            compat_mode_key = user_input.get("compat_mode_key", "").strip()
-            # Save preference directly to options
+            # compat_mode_key field is hidden this release — key enforcement
+            # is deferred (see panel_api.py). We deliberately do NOT touch
+            # any previously-stored key here; it's simply unused for now.
+            new_options = {
+                **self.config_entry.options,
+                "compatibility_mode": compatibility_mode,
+                "use_attributes": use_attributes,
+            }
+
+            # Update options immediately (in-memory) so
+            # async_register_cn_panel below sees the NEW compatibility_mode
+            # right away — it reads self.config_entry.options directly, and
+            # that wouldn't reflect this save yet if we only relied on the
+            # async_create_entry() return below (HA applies that write
+            # after this step returns, not before).
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
-                options={
-                    "compatibility_mode": compatibility_mode,
-                    "use_attributes": use_attributes,
-                    "compat_mode_key": compat_mode_key,
-                },
+                options=new_options,
             )
+
             # Update the sensor's use_attributes flag synchronously
             sensor = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
             if sensor and hasattr(sensor, "async_update_use_attributes"):
@@ -112,18 +122,21 @@ class CombinedNotificationsOptionsFlow(config_entries.OptionsFlow):
             from . import async_register_cn_panel
             await async_register_cn_panel(self.hass, self.config_entry)
 
-            return self.async_create_entry(title="", data={})
+            # Also return the SAME new_options via async_create_entry —
+            # this is what the options-flow framework actually persists as
+            # entry.options once this step returns. Passing data={} here
+            # (as an earlier version of this code did) would silently wipe
+            # the update above back to {} right after we just set it. Both
+            # writes must agree on new_options so neither clobbers the
+            # other.
+            return self.async_create_entry(title="", data=new_options)
 
         current_mode = self.config_entry.options.get("compatibility_mode", False)
         current_use_attributes = self.config_entry.options.get("use_attributes", False)
-        current_compat_key = self.config_entry.options.get("compat_mode_key", "")
 
         schema = vol.Schema({
             vol.Required("compatibility_mode", default=current_mode): bool,
             vol.Required("use_attributes", default=current_use_attributes): bool,
-            vol.Optional("compat_mode_key", default=current_compat_key): selector.selector(
-                {"text": {"type": "password"}}
-            ),
         })
 
         return self.async_show_form(
