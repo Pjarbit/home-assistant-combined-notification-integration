@@ -1,5 +1,5 @@
 """REST API endpoints for Combined Notifications panel."""
-# Integration version: 8.10.10
+# Integration version: 8.11.0
 from __future__ import annotations
 
 import hmac
@@ -17,7 +17,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _check_compat_key(request: web.Request, entry) -> bool:
-    """Return True if the compat-mode key check passes (or no key is set)."""
+    """Return True if the compat-mode key check passes (or no key is set).
+
+    DEFERRED for this release — the key field is hidden from the settings
+    form and the panel's own JS/HTML never sends the key back on its
+    requests, so enforcing this would lock users out of their own panel
+    the moment they set one. Left unused (not called) rather than deleted,
+    so it can be wired up properly in a later release once the frontend
+    actually sends the key. Compatibility mode's security boundary for
+    now is simply: run it on a trusted/secured network.
+    """
     expected = entry.options.get(CONF_COMPAT_MODE_KEY, "") or ""
     if not expected:
         return True  # no key set = open, non-breaking for existing users
@@ -43,8 +52,11 @@ class CombinedNotificationsConfigView(HomeAssistantView):
         if not entry:
             return self.json_message("Entry not found", 404)
 
-        if not _check_compat_key(request, entry):
-            return self.json_message("Forbidden", 403)
+        # NOTE: compat_mode_key enforcement is deferred this release (see
+        # _check_compat_key docstring) — the frontend never sends the key,
+        # so enforcing it here would lock users out of their own panel.
+        # Compatibility mode's trust boundary for now: trusted/secured
+        # network only.
 
         return self.json(
             {"config": dict(entry.data), "options": dict(entry.options)},
@@ -71,8 +83,10 @@ class CombinedNotificationsConfigView(HomeAssistantView):
         if user is not None and not user.is_admin:
             return self.json_message("Forbidden", 403)
 
-        if not _check_compat_key(request, entry):
-            return self.json_message("Forbidden", 403)
+        # compat_mode_key enforcement deferred this release — see
+        # _check_compat_key docstring. Admin check above is the real
+        # gate for the write path (Frenck's finding); trusted-network
+        # is the gate for the no-HA-user compatibility-mode case.
 
         try:
             body = await request.json()
@@ -135,8 +149,8 @@ class CombinedNotificationsStatesView(HomeAssistantView):
         if not entry:
             return self.json_message("Entry not found", 404)
 
-        if not _check_compat_key(request, entry):
-            return self.json_message("Forbidden", 403)
+        # compat_mode_key enforcement deferred this release — see
+        # _check_compat_key docstring. Trusted-network is the boundary.
 
         states = {
             state.entity_id: {
