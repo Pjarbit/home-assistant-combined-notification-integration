@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 8.10.10
+# Integration version: 8.11.0
 import logging
 import os
 import time
