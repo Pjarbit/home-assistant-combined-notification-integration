@@ -1,14 +1,14 @@
 /**
- * Combined Notifications Panel v8.11.0
+ * Combined Notifications Panel v8.11.5
  * Vanilla JS — iframe REST API approach
- * pja 8.11.0
+ * pja 8.11.5
  */
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const VERSION = "8.11.0";
+const VERSION = "8.11.5";
 
 const COLORS = [
   { label: "Use YOUR Current Theme Color", value: "Use YOUR Current Theme Color", css: "var(--primary-background-color)" },
@@ -491,7 +491,7 @@ function buildPanel() {
     </div>
 
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;">
-      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.11.0</span>
+      <span style="font-size:0.65rem;color:#64748b;font-family:monospace;margin-right:auto;">pja 8.11.5</span>
       ${_error ? `<span style="font-size:0.82rem;color:#fc8181;flex:1;">${esc(_error)}</span>` : ""}
       ${_saved ? `<span style="font-size:0.82rem;color:#68d391;">✓ Saved — this window can safely be closed.</span>` : ""}
       <div style="display:flex;gap:10px;">
@@ -649,11 +649,12 @@ function buildOverview() {
   for (const cond of (_config.conditions || [])) {
     if ("entity_filter" in cond) continue;
     if (!cond.entity_id) continue;
-    const state = currentState(cond.entity_id);
+    const entityFound = _states[cond.entity_id] !== undefined;
+    const state = entityFound ? currentState(cond.entity_id) : "Entity not found";
     const found = _allEntityList.find(([id]) => id === cond.entity_id);
     const friendly = found ? (found[1].friendly_name || cond.entity_id) : cond.entity_id;
-    const isAlert = !cond.paused && evalCondition(state, cond.operator, cond.trigger_value);
-    rows.push({ name: cond.name || friendly, entityId: cond.entity_id, domain: cond.entity_id.split(".")[0], state, operator: cond.operator, triggerValue: cond.trigger_value || "", sourceType: "Individual", sourceLabel: cond.name || friendly, paused: !!cond.paused, alert: isAlert });
+    const isAlert = entityFound && !cond.paused && evalCondition(state, cond.operator, cond.trigger_value);
+    rows.push({ name: cond.name || friendly, entityId: cond.entity_id, domain: cond.entity_id.split(".")[0], state, operator: cond.operator, triggerValue: cond.trigger_value || "", sourceType: "Individual", sourceLabel: cond.name || friendly, paused: !!cond.paused, alert: isAlert, notFound: !entityFound });
   }
   for (const cond of (_config.conditions || [])) {
     if (!("entity_filter" in cond)) continue;
@@ -696,7 +697,7 @@ function buildOverview() {
               <span style="font-size:0.88rem;font-weight:500;color:${row.alert ? "#fc8181" : row.paused ? "#f6ad55" : "#e2e8f0"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(row.name)}</span>
               <span style="font-size:0.62rem;font-family:monospace;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:#63b3ed;font-weight:700;">${row.sourceType} —</span> ${esc(row.sourceLabel)}</span>
             </div>
-            <span style="font-size:0.78rem;font-family:monospace;color:${row.alert ? "#fc8181" : row.paused ? "#f6ad55" : "#68d391"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(row.state)}</span>
+            <span style="font-size:0.78rem;font-family:monospace;color:${row.alert ? "#fc8181" : row.paused ? "#f6ad55" : row.notFound ? "#64748b" : "#68d391"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(row.state)}</span>
             <span style="font-size:0.78rem;font-family:monospace;color:#94a3b8;white-space:nowrap;">${formatCondition(row.operator, row.triggerValue)}</span>
           </div>
         `).join("")}
@@ -1475,7 +1476,7 @@ async function importBackup(e) {
 // Init
 // ---------------------------------------------------------------------------
 
-console.log('%cCombined Notifications v8.11.0 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
+console.log('%cCombined Notifications v8.11.5 — Vanilla JS panel initializing', 'color:#39FF14; font-weight:bold');
 
 const params = new URLSearchParams(window.location.search);
 _entryId = params.get("entry_id") || "";
