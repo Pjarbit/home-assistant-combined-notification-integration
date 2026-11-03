@@ -1,5 +1,10 @@
 # Security Policy
 
+## Requirements
+
+- **Home Assistant 2024.12.0 or newer** (set in `hacs.json`; HACS will not offer the integration on older versions)
+- Installed through HACS or by copying `custom_components/combined_notifications` into your Home Assistant config folder
+
 ## Supported Versions
 
 Only the latest release of Combined Notifications receives security updates. Please make sure you are running the most recent version before reporting a vulnerability.
@@ -40,6 +45,10 @@ Combined Notifications is a Home Assistant custom integration with a REST API pa
 Compatibility mode (the iframe-based panel) has no authentication of its own as of v8.11.0. A shared-secret key option (`compat_mode_key`) was previously exposed in the settings UI, but it was found to be non-functional — the panel's own frontend never sent the key back to the server, so enabling it would have locked users out of their own panel rather than protecting it. The field has been hidden and the key is no longer enforced anywhere, pending a proper implementation in a future release.
 
 Until then: compatibility mode's data endpoints (configuration and entity states) are accessible to anyone who knows the panel URL and can reach the Home Assistant instance's network. This is a deliberate, documented tradeoff for this release, not an oversight — **only use compatibility mode on a trusted, secured network.** It is not equivalent to Home Assistant's own authentication. The standard (Lit) panel is unaffected and always uses Home Assistant's real authentication.
+
+### Export ALL for AGS (v8.12.0)
+
+The `combined_notifications/export_all` WebSocket command used by the **Export ALL for AGS** button requires a Home Assistant admin user. The export file contains your sensor configuration (conditions, labels, colors) and never includes `compat_mode_key`. Treat the file like any other backup of your configuration.
 
 Issues in Home Assistant itself, HACS, or third-party integrations are out of scope — please report those to their respective projects.
 
