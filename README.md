@@ -692,7 +692,7 @@ If your configuration panel appears blank after clicking Configure,
 
 *Special thanks to The Smart Home Junkie, David Wallis, Kaibob2(github) and Jason Bogart for their wisdom, teaching, hard work, documentation of errors, and beta testing.*
 
-*Code written by [Pjarbit](https://github.com/Pjarbit), with assistance and critical verification from [Claude](https://claude.ai) (Anthropic) and [Grok](https://grok.com) (xAI) AI.*
+*Code written by [Pjarbit](https://github.com/Pjarbit), with critical troubleshooting and verification by [Claude](https://claude.ai) (Anthropic) and [Grok](https://grok.com) (xAI) AI.*
 
 ---
 
