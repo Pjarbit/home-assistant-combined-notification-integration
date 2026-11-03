@@ -1,10 +1,11 @@
 """Sensor platform for Combined Notifications."""
-# Integration version: 8.11.5
+# Integration version: 8.12.0
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity, EntityCategory
 from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
@@ -255,13 +256,13 @@ class CombinedNotificationSensor(Entity):
         return attrs
 
     @property
-    def device_info(self):
-        return {
-            "identifiers": {(DOMAIN, self._entry_id)},
-            "name": self._name,
-            "manufacturer": "Combined Notifications",
-            "model": "Virtual Sensor",
-        }
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._entry_id)},
+            name=self._name,
+            manufacturer="Combined Notifications",
+            model="Virtual Sensor",
+        )
 
     # ── State change listener ─────────────────────────────────────────────
 
@@ -298,6 +299,11 @@ class CombinedNotificationSensor(Entity):
 
         # Safety net for very slow cloud integrations (Mercedes, etc.)
         self._safety_net_unsub = async_call_later(self._hass, 60, _resubscribe)
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place entity_id changes (HA 2026.11+)."""
+        super().async_entity_id_changed(old_entity_id)
 
     async def async_will_remove_from_hass(self) -> None:
         """Clean up listeners."""
@@ -537,8 +543,13 @@ class CombinedNotificationCountSensor(Entity):
         return len(self._parent._unmet)
 
     @property
-    def device_info(self):
+    def device_info(self) -> DeviceInfo:
         return self._parent.device_info
 
     async def async_added_to_hass(self) -> None:
         self._parent._count_sensor = self
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place entity_id changes (HA 2026.11+)."""
+        super().async_entity_id_changed(old_entity_id)

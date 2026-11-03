@@ -99,6 +99,18 @@ If you are a standard user, do not select it. If you are a power user with many 
 
 ---
 
+## ➡️ Moving to Advanced Group Sensor
+
+Combined Notifications is being replaced by [Advanced Group Sensor](https://github.com/Pjarbit/ha-advanced-group-sensor) (AGS). You can move every sensor over in one go:
+
+1. Update Combined Notifications to 8.12.0 or later. **If you use compatibility mode, turn it off and test first** — AGS does not have a compatibility mode (BREAKING CHANGE).
+2. Rename each Combined Notifications sensor and its Fault Count sensor so the entity ID ends in `_old` (for example `sensor.kitchen_old`).
+3. Open any Combined Notifications panel and click **⬇ Export ALL for AGS** in Backup & Restore. This saves every sensor to one file.
+4. In AGS, create a sensor named `import` and open its panel. At the bottom, click **⬆ Import from Combined Notifications**, choose the file, and tick the sensors to bring over.
+5. Check them, then delete the `import` sensor and disable the old Combined Notifications entries.
+
+Each imported sensor keeps its original name, so `sensor.kitchen` stays `sensor.kitchen`. Nothing in Combined Notifications is changed.
+
 ## ⬆️ Upgrading from v4
 
 Moving from v4 should be seamless. Your existing sensors should carry over to the new version without any issues.
