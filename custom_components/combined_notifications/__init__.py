@@ -1,5 +1,5 @@
 """Combined Notifications integration."""
-# Integration version: 8.11.5
+# Integration version: 8.12.0
 import logging
 import os
 import time
@@ -138,6 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         websocket_api.async_register_command(hass, websocket_get_config)
         websocket_api.async_register_command(hass, websocket_get_states)
         websocket_api.async_register_command(hass, websocket_save_config)
+        websocket_api.async_register_command(hass, websocket_export_all)
         hass.data[DOMAIN]["_ws_registered"] = True
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
@@ -261,3 +262,31 @@ async def websocket_save_config(hass, connection, msg):
     except Exception as err:
         _LOGGER.exception("Failed to save config")
         connection.send_error(msg["id"], "save_failed", str(err))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): "combined_notifications/export_all",
+})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_export_all(hass, connection, msg):
+    """Return every Combined Notifications sensor in one export for Advanced Group Sensor."""
+    sensors = []
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        sensors.append({
+            "name": entry.data.get("name", ""),
+            "title": entry.title,
+            "config": dict(entry.data),
+            # Only the two display options; never the compatibility-mode key.
+            "options": {
+                k: entry.options[k]
+                for k in ("use_attributes", "compatibility_mode")
+                if k in entry.options
+            },
+        })
+
+    connection.send_result(msg["id"], {
+        "format": "combined_notifications_export",
+        "format_version": 1,
+        "sensors": sensors,
+    })

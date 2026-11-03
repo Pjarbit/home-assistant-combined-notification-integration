@@ -1,5 +1,5 @@
 /**
- * Combined Notifications Panel v8.11.5
+ * Combined Notifications Panel v8.12.0
  * Style injection + force visibility fix for card-mod compatibility
  */
 
@@ -42,15 +42,15 @@ if (typeof css  !== "function") css  = (strings, ...values) => {
 };
 
 try {
-  console.log('%cCombined Notifications v8.11.5 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v8.12.0 → Starting definePanel()', 'color:#39FF14; font-weight:bold');
   definePanel();
-  console.log('%cCombined Notifications v8.11.5 → Successfully registered', 'color:#39FF14; font-weight:bold');
+  console.log('%cCombined Notifications v8.12.0 → Successfully registered', 'color:#39FF14; font-weight:bold');
 } catch (e) {
   console.error('🚨 Combined Notifications PANEL CRASHED during initialization:', e);
   const errorHTML = `
     <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e2535;color:#fc8181;padding:30px 40px;border-radius:16px;border:3px solid #fc8181;z-index:999999;font-family:sans-serif;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
       <h2 style="margin:0 0 16px 0;color:#fc8181">Combined Notifications Panel Failed to Load</h2>
-      <p style="margin:8px 0">Version 8.11.5</p>
+      <p style="margin:8px 0">Version 8.12.0</p>
       <pre style="background:#000;color:#fff;padding:12px;text-align:left;font-size:13px;overflow:auto;max-height:300px;">${e.message}\n${e.stack ? e.stack.substring(0,800) : ''}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#63b3ed;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:600">Reload Page</button>
     </div>
@@ -1785,7 +1785,7 @@ class CombinedNotificationsPanel extends LitElement {
           </div>
 
           <div class="dialog-footer">
-            <span class="version-stamp">pja v8.11.5</span>
+            <span class="version-stamp">pja v8.12.0</span>
             ${this._error ? html`<span class="error-msg">${this._error}</span>` : ""}
             ${this._saved ? html`<span class="saved-msg">✓ Saved</span>` : ""}
             <div class="footer-buttons">
@@ -1841,6 +1841,25 @@ class CombinedNotificationsPanel extends LitElement {
       this.requestUpdate();
     }
     e.target.value = "";
+  }
+
+  async _exportAllForAgs() {
+    try {
+      const result = await this.hass.callWS({ type: "combined_notifications/export_all" });
+      const filename = "combined_notifications_export_for_ags.json";
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      this._backupMsg = `✓ Exported ${result.sensors.length} sensors to ${filename}`;
+    } catch (err) {
+      this._backupMsg = `✗ Export failed: ${err.message}`;
+    }
+    this.requestUpdate();
+    setTimeout(() => { this._backupMsg = ""; this.requestUpdate(); }, 6000);
   }
 
   _renderGeneral() {
@@ -1966,10 +1985,12 @@ class CombinedNotificationsPanel extends LitElement {
         <div class="group-header">Backup & Restore</div>
         <div class="group-body">
           <div style="background:#0d0f18;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;">
-            <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor with the same name, open its panel, and import the backup file.</em></div>
+            <div class="hint"><em>Export saves all conditions, groups, and settings to a JSON file. To restore, create a new sensor with the same name, open its panel, and import the backup file. Export ALL for AGS saves every Combined Notifications sensor in one file; in Advanced Group Sensor, create a sensor named import, open its panel, and use Import from Combined Notifications at the bottom. AGS does not have a compatibility mode (BREAKING CHANGE): if you use it here, turn it off and test first.</em></div>
             <div class="backup-row">
               <button class="backup-btn export-btn" @click="${this._exportBackup}">⬇ Export Sensor</button>
               <button class="backup-btn import-btn" @click="${this._triggerImport}">⬆ Import Sensor</button>
+              <button class="backup-btn export-btn" title="Save every Combined Notifications sensor in one file for Advanced Group Sensor"
+                @click="${this._exportAllForAgs}">⬇ Export ALL for AGS</button>
               <input type="file" id="backup-file-input" accept=".json" style="display:none"
                 @change="${this._importBackup}">
             </div>
