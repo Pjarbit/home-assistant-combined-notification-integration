@@ -1,5 +1,5 @@
 """Sensor platform for Combined Notifications."""
-# Integration version: 8.12.0
+# Integration version: 8.12.2
 from __future__ import annotations
 
 from typing import Any
